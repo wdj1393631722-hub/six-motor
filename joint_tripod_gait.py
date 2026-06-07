@@ -20,20 +20,20 @@ from enable_state import _leg_femur_tibia_split
 from tripod_planner import TRIPOD_A, TRIPOD_B
 
 # --- 幅度（度）---
-LIFT_UD_DEG = 24.0
-SWING_FWD_DEG = 32.0
-STANCE_REAR_DEG = 28.0
-PUSH_FWD_DEG = 14.0
+LIFT_UD_DEG = 28.0
+SWING_FWD_DEG = 38.0
+STANCE_REAR_DEG = 32.0
+PUSH_FWD_DEG = 22.0
 
-# 单半周期时长 (s)：swing / place / push
-PHASE_SWING_S = 0.55
-PHASE_PLACE_S = 0.18
-PHASE_PUSH_S = 0.45
-PHASE_SLOWDOWN = 1.5
-HALF_CYCLE_BODY_Y = 0.035
+# 单半周期时长 (s)：swing / place / push（缩短 → 步频更快）
+PHASE_SWING_S = 0.40
+PHASE_PLACE_S = 0.12
+PHASE_PUSH_S = 0.30
+PHASE_SLOWDOWN = 1.2
+HALF_CYCLE_BODY_Y = 0.058
 
 # 关节指令一阶平滑时间常数 (s)，越小越跟手、越大越柔
-JOINT_SMOOTH_TAU = 0.13
+JOINT_SMOOTH_TAU = 0.09
 
 BODY_FORWARD_AXIS = "Y"
 
@@ -309,7 +309,7 @@ class JointTripodCrawlPlanner:
         direction: float = 1.0,
         physics: bool = True,
     ) -> Dict[str, float]:
-        rate = max(0.35, min(speed_scale, 1.2))
+        rate = max(0.45, min(speed_scale, 2.2))
         self._last_dt = dt
         self.t += dt * rate
         phase_t = self.t % self.cycle_time

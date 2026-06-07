@@ -2,7 +2,7 @@
 """
 TEST-4.0 前进爬行步态表 — 对齐 App.c R04_ForwardCrawlSteps。
 
-实机 12-DOF（fb 奇轴 / ud 偶轴）→ 仿真 18-DOF（coxa / femur+tibia）。
+历史参考：旧 TEST-4.0 固件 12 电机抽象；当前实机为 18 关节（coxa/femur/tibia）与仿真 1:1。
 10 步周期 400 ms：A 组(1/3/5) ①–③ → B 组(2/4/6) ④–⑥。
 """
 from __future__ import annotations
@@ -199,7 +199,7 @@ def offsets_to_joints(
     stand: Dict[str, float],
     offsets: Dict[int, LegOffset],
 ) -> Dict[str, float]:
-    """12-DOF 偏置 → 18 关节角。"""
+    """旧 12 电机抽象偏置 → 18 关节角（历史固件参考）。"""
     out = dict(stand)
     for leg in range(1, 7):
         fb, ud = offsets.get(leg, (0.0, 0.0))

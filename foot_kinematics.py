@@ -21,13 +21,21 @@ PRONE_POSE_PATH = os.path.join(SCRIPT_DIR, "generated", "prone_pose_flat.json")
 FootFrame = Tuple[np.ndarray, np.ndarray]
 
 # 站立时各腿足底接触点目标世界高度（m，z=0 为地面）
-FOOT_CONTACT_Z = 0.008
+FOOT_CONTACT_Z = 0.002
 # 机身原点最低高度（m），避免主体下板贴地
-MIN_BODY_HEIGHT = 0.065
+MIN_BODY_HEIGHT = 0.050
 # 标定目标：主体下沿离地净空（m）
 TARGET_BASE_CLEARANCE = 0.045
-# 行走时机身参考高度（m），与物理平衡标定一致（勿 kinematic 锁定 qpos）
-LOCOMOTION_BODY_HEIGHT = 0.087
+# 行走站立时机身原点高度（m）
+WALK_BODY_HEIGHT = 0.050
+# 失能趴地时机身原点高度（m）；略高于站立，避免主体下板穿地卡住
+PRONE_BODY_HEIGHT = 0.058
+# 关节解算时相对名义机身高度的补偿（物理 PD 柔顺导致足底略悬空）
+CONTACT_SOLVE_BODY_BIAS = 0.010
+# 行走时机身参考高度（m），与 stand_pose_flat.json 一致
+LOCOMOTION_BODY_HEIGHT = WALK_BODY_HEIGHT
+# 使能时相对趴地抬升机身原点（m）；配合关节解算，足端仍贴地
+ENABLE_BODY_LIFT_M = 0.022
 
 def _tilt_cost(n_world: np.ndarray) -> float:
     """脚底法向应指向世界 -Z（朝下），与竖直夹角越小 cost 越小。"""
@@ -1034,7 +1042,7 @@ def calibrate_prone_pose(
                 for j in ("coxa", "femur", "tibia")
             }
     seed = _prone_pose_seed(stand_pose)
-    bz = float(MIN_BODY_HEIGHT if body_z is None else body_z)
+    bz = float(PRONE_BODY_HEIGHT if body_z is None else body_z)
     frames = load_foot_frames(model, seed, bz)
     out = dict(seed)
     target_z = FOOT_CONTACT_Z
@@ -1063,6 +1071,354 @@ def calibrate_prone_pose(
         min_body_z=MIN_BODY_HEIGHT,
     )
     return out, bz
+
+
+def make_prone_from_stand_pose(
+    model: mujoco.MjModel,
+    stand_pose: Dict[str, float],
+    body_z: float | None = None,
+) -> Tuple[Dict[str, float], float]:
+    """
+    从 stand_pose_flat.json 生成趴地角：coxa 与站立完全一致，只调 femur/tibia 贴地。
+    """
+    data = mujoco.MjData(model)
+    bz = float(PRONE_BODY_HEIGHT if body_z is None else body_z)
+    out, bz = calibrate_prone_pose(model, stand_pose=stand_pose, body_z=bz)
+    for leg in range(1, 7):
+        out[f"leg{leg}_coxa_joint"] = float(stand_pose[f"leg{leg}_coxa_joint"])
+    frames = load_foot_frames(model, out, bz)
+    target_z = FOOT_CONTACT_Z
+    for leg in range(1, 7):
+        out = _adjust_leg_foot_height(
+            model,
+            data,
+            leg,
+            out,
+            bz,
+            frames,
+            target_z,
+            allow_coxa=False,
+            coarse=False,
+        )
+    return out, bz
+
+
+MIDDLE_LEG_NEIGHBORS: Dict[int, Tuple[int, int]] = {2: (1, 3), 5: (4, 6)}
+
+
+def _solve_leg_femur_tibia_contact(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pose: Dict[str, float],
+    body_z: float,
+    leg: int,
+    *,
+    ref_femur: float | None = None,
+    ref_tibia: float | None = None,
+    neighbor_weight: float = 0.8,
+    foot_weight: float = 220.0,
+    tilt_weight: float = 80.0,
+) -> Dict[str, float]:
+    """固定 coxa，搜索 femur/tibia：足底贴地 + 脚面平行地面 + 趋近外圈参考角。"""
+    out = dict(pose)
+    frames = load_foot_frames(model, out, body_z)
+    jid_f = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"leg{leg}_femur_joint")
+    jid_t = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"leg{leg}_tibia_joint")
+    rf = float(out[f"leg{leg}_femur_joint"] if ref_femur is None else ref_femur)
+    rt = float(out[f"leg{leg}_tibia_joint"] if ref_tibia is None else ref_tibia)
+    fr, tr = model.jnt_range[jid_f], model.jnt_range[jid_t]
+
+    def _leg_cost(f: float, t: float) -> float:
+        trial = dict(out)
+        trial[f"leg{leg}_femur_joint"] = float(f)
+        trial[f"leg{leg}_tibia_joint"] = float(t)
+        _set_pose(model, data, trial, body_z)
+        mujoco.mj_forward(model, data)
+        pad_z = foot_pad_bottom_z(model, data, leg)
+        _, n = foot_world(model, data, leg, frames)
+        return (
+            foot_weight * (pad_z - FOOT_CONTACT_Z) ** 2
+            + tilt_weight * _tilt_cost(n)
+            + 6.0 * _shank_side_down_penalty(model, data, leg, frames)
+            + neighbor_weight * ((float(f) - rf) ** 2 + 0.5 * (float(t) - rt) ** 2)
+        )
+
+    best_cost = 1e18
+    best_f, best_t = rf, rt
+    for f in np.linspace(fr[0], fr[1], 90):
+        for t in np.linspace(tr[0], tr[1], 50):
+            cost = _leg_cost(float(f), float(t))
+            if cost < best_cost:
+                best_cost, best_f, best_t = cost, float(f), float(t)
+    for f in np.linspace(max(fr[0], best_f - 0.18), min(fr[1], best_f + 0.18), 25):
+        for t in np.linspace(max(tr[0], best_t - 0.22), min(tr[1], best_t + 0.22), 22):
+            cost = _leg_cost(float(f), float(t))
+            if cost < best_cost:
+                best_cost, best_f, best_t = cost, float(f), float(t)
+    out[f"leg{leg}_femur_joint"] = best_f
+    out[f"leg{leg}_tibia_joint"] = best_t
+    return out
+
+
+def _solve_leg2_flat_contact(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pose: Dict[str, float],
+    body_z: float,
+    *,
+    max_hover_m: float = 0.005,
+) -> Dict[str, float]:
+    """
+    腿 2 专用：coxa 不变，在允许离地阈值内优先脚面平行（tibia 下限常为 0°）。
+    """
+    out = dict(pose)
+    leg = 2
+    frames = load_foot_frames(model, out, body_z)
+    jid_f = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"leg{leg}_femur_joint")
+    jid_t = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"leg{leg}_tibia_joint")
+    fr, tr = model.jnt_range[jid_f], model.jnt_range[jid_t]
+    candidates: list[tuple[float, float, float, float]] = []
+
+    def _sample(f_vals, t_vals) -> None:
+        for f in f_vals:
+            for t in t_vals:
+                trial = dict(out)
+                trial[f"leg{leg}_femur_joint"] = float(f)
+                trial[f"leg{leg}_tibia_joint"] = float(t)
+                _set_pose(model, data, trial, body_z)
+                mujoco.mj_forward(model, data)
+                pad_z = foot_pad_bottom_z(model, data, leg)
+                _, n = foot_world(model, data, leg, frames)
+                candidates.append((_tilt_cost(n), pad_z, float(f), float(t)))
+
+    _sample(
+        np.linspace(fr[0], fr[1], 220),
+        np.linspace(tr[0], tr[1], 90),
+    )
+    for hover_lim in (max_hover_m, max_hover_m + 0.003, max_hover_m + 0.008, 0.025):
+        ok = [c for c in candidates if c[1] <= hover_lim]
+        if ok:
+            _, _, best_f, best_t = min(ok, key=lambda x: (x[0], x[1]))
+            out[f"leg{leg}_femur_joint"] = best_f
+            out[f"leg{leg}_tibia_joint"] = best_t
+            return out
+    _, _, best_f, best_t = min(candidates, key=lambda x: (x[0], 220.0 * x[1] ** 2))
+    out[f"leg{leg}_femur_joint"] = best_f
+    out[f"leg{leg}_tibia_joint"] = best_t
+    return out
+
+
+def _stand_max_foot_hover(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pose: Dict[str, float],
+    body_z: float,
+) -> float:
+    _set_pose(model, data, pose, body_z)
+    mujoco.mj_forward(model, data)
+    return max(foot_pad_bottom_z(model, data, leg) for leg in range(1, 7))
+
+
+def recalibrate_stand_contact_pose(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    stand_pose: Dict[str, float],
+    body_z: float,
+    *,
+    keep_coxa: bool = True,
+    max_hover_m: float = 0.0025,
+) -> Tuple[Dict[str, float], float]:
+    """
+    固定 coxa（手动标定），重算六腿 femur/tibia，使足底贴地、脚面平行。
+    默认行走高度 50mm。
+    """
+    bz = max(float(MIN_BODY_HEIGHT), float(body_z))
+    pose = dict(stand_pose)
+    coxa_saved = {
+        f"leg{leg}_coxa_joint": float(pose[f"leg{leg}_coxa_joint"])
+        for leg in range(1, 7)
+    }
+
+    def _restore_coxa() -> None:
+        if keep_coxa:
+            for leg in range(1, 7):
+                pose[f"leg{leg}_coxa_joint"] = coxa_saved[f"leg{leg}_coxa_joint"]
+
+    def _pass_all_legs(coarse: bool) -> None:
+        nonlocal pose
+        solve_bz = max(MIN_BODY_HEIGHT, bz - CONTACT_SOLVE_BODY_BIAS)
+        frames = load_foot_frames(model, pose, solve_bz)
+        for leg in (1, 3, 4, 5, 6):
+            pose = _adjust_leg_foot_height(
+                model,
+                data,
+                leg,
+                pose,
+                solve_bz,
+                frames,
+                FOOT_CONTACT_Z,
+                allow_coxa=False,
+                coarse=coarse,
+            )
+        pose = _solve_leg2_flat_contact(
+            model, data, pose, solve_bz, max_hover_m=max_hover_m
+        )
+        _restore_coxa()
+
+    for rnd in range(4):
+        _pass_all_legs(coarse=(rnd < 2))
+    frames = load_foot_frames(model, pose, bz)
+    pose, bz = equalize_stand_foot_heights(
+        model,
+        data,
+        pose,
+        bz,
+        frames,
+        target_z=FOOT_CONTACT_Z,
+        rounds=5,
+        fix_body_z=True,
+        min_body_z=MIN_BODY_HEIGHT,
+    )
+    _restore_coxa()
+    for _ in range(3):
+        _pass_all_legs(coarse=False)
+
+    # 若仍悬空，微降机身再压一次足底（仍保持 coxa）
+    for _ in range(6):
+        hover = _stand_max_foot_hover(model, data, pose, bz)
+        if hover <= max_hover_m:
+            break
+        bz = max(MIN_BODY_HEIGHT, bz - 0.0005)
+        _pass_all_legs(coarse=False)
+
+    return pose, bz
+
+
+def align_middle_legs_stand_pose(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    stand_pose: Dict[str, float],
+    body_z: float,
+    legs: Tuple[int, ...] = (2, 5),
+    *,
+    neighbor_weight: float = 0.8,
+) -> Dict[str, float]:
+    """
+    使能站立：腿 2/5 不改 coxa，只调 femur/tibia，足底贴地且脚面平行。
+    """
+    pose = dict(stand_pose)
+    for leg in legs:
+        if leg == 2:
+            pose = _solve_leg2_flat_contact(model, data, pose, body_z, max_hover_m=0.005)
+            continue
+        refs = MIDDLE_LEG_NEIGHBORS.get(leg)
+        if not refs:
+            continue
+        rf = sum(pose[f"leg{r}_femur_joint"] for r in refs) / len(refs)
+        rt = sum(pose[f"leg{r}_tibia_joint"] for r in refs) / len(refs)
+        w = neighbor_weight if leg == 5 else neighbor_weight
+        pose = _solve_leg_femur_tibia_contact(
+            model,
+            data,
+            pose,
+            body_z,
+            leg,
+            ref_femur=rf,
+            ref_tibia=rt,
+            neighbor_weight=w,
+            tilt_weight=100.0,
+        )
+    return pose
+
+
+def adjust_stand_body_height(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    stand_pose: Dict[str, float],
+    body_z: float,
+    delta_m: float,
+    *,
+    min_body_z: float | None = None,
+) -> Tuple[Dict[str, float], float]:
+    """
+    通过 femur/tibia 抬高/降低站立姿态（coxa 不变），足底仍贴地。
+    用于行走前标定机身高度，避免只改 qpos[2] 导致腾空拖行。
+    """
+    floor = float(WALK_BODY_HEIGHT if min_body_z is None else min_body_z)
+    new_bz = max(floor, float(body_z) + float(delta_m))
+    return recalibrate_stand_contact_pose(
+        model, data, stand_pose, new_bz, keep_coxa=True
+    )
+
+
+def solve_stand_at_height(
+    model: mujoco.MjModel,
+    prone_pose: Dict[str, float],
+    coxa_pose: Dict[str, float],
+    body_z: float,
+    *,
+    rounds: int = 2,
+) -> Tuple[Dict[str, float], float]:
+    """
+    从趴地角解算站立角：抬高 body_z，coxa 保持标定值，femur/tibia 使六足贴地。
+    用于使能与行走步态共用同一站立基准。
+    """
+    data = mujoco.MjData(model)
+    bz = float(body_z)
+    out = dict(prone_pose)
+    for leg in range(1, 7):
+        jn = f"leg{leg}_coxa_joint"
+        if jn in coxa_pose:
+            out[jn] = float(coxa_pose[jn])
+    frames = load_foot_frames(model, out, bz)
+    for rnd in range(rounds):
+        for leg in range(1, 7):
+            out = _adjust_leg_foot_height(
+                model,
+                data,
+                leg,
+                out,
+                bz,
+                frames,
+                FOOT_CONTACT_Z,
+                allow_coxa=False,
+                coarse=(rnd == 0),
+            )
+    return out, bz
+
+
+def resolve_prone_body_height(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pose: Dict[str, float],
+    body_z: float,
+    *,
+    min_clearance: float = 0.0,
+    step_m: float = 0.001,
+    max_steps: int = 15,
+) -> float:
+    """抬高趴地 body_z，直到主体下沿不再穿地。"""
+    bz = float(body_z)
+    _set_pose(model, data, pose, bz)
+    for _ in range(max_steps):
+        clr = body_bottom_clearance(model, data, bz)
+        if clr >= min_clearance:
+            return bz
+        bz += step_m
+    return bz
+
+
+def prone_foot_max_hover(
+    model: mujoco.MjModel,
+    pose: Dict[str, float],
+    body_z: float,
+) -> float:
+    """趴地姿态足底最大离地高度（米）。"""
+    data = mujoco.MjData(model)
+    frames = load_foot_frames(model, pose, body_z)
+    _set_pose(model, data, pose, body_z)
+    mujoco.mj_forward(model, data)
+    return max(foot_pad_bottom_z(model, data, leg) for leg in range(1, 7))
 
 
 def save_prone_pose(pose: Dict[str, float], body_z: float) -> str:

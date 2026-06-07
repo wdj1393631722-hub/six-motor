@@ -18,7 +18,22 @@ sys.path.insert(0, SCRIPT_DIR)
 from enable_state import BODY_LIFT_EVEN_DEG, CRAWL_LIFT_UD_DEG, CRAWL_SWING_FB_DEG
 from foot_kinematics import _set_pose, foot_world, load_foot_frames, load_prone_pose, load_stand_pose
 from leg_symmetry import HIP_MOUNT_XY, LEG_AZIMUTH_DEG, MIRROR_PAIRS, feet_in_base
-from test40_crawl import CRAWL_PHASE_SLOWDOWN, CYCLE_TIME_S, FORWARD_CRAWL_STEPS
+from joint_tripod_gait import (
+    BODY_FORWARD_AXIS,
+    CYCLE_TIME_S,
+    LIFT_UD_DEG,
+    PHASE_SLOWDOWN,
+    PUSH_FWD_DEG,
+    STANCE_REAR_DEG,
+    SWING_FWD_DEG,
+)
+from robot_limits import (
+    FEMUR_UD_RATIO,
+    TIBIA_UD_RATIO,
+    all_joint_names,
+    joint_limits_deg,
+)
+from enable_state import LOCOMOTION_KP, LOCOMOTION_KV, STAND_KP, STAND_KV
 
 
 def main() -> None:
@@ -100,15 +115,15 @@ def main() -> None:
             "mirror_pairs": list(MIRROR_PAIRS),
             "hip_mount_xy_m": {str(k): list(v) for k, v in HIP_MOUNT_XY.items()},
             "azimuth_deg": LEG_AZIMUTH_DEG,
-            "motor_mapping_12dof": {
-                "note": "实机 TEST-4.0：每腿 2 电机 fb(水平)+ud(竖直)",
-                "leg1": "m1=fb, m2=ud",
-                "leg2": "m3=fb, m4=ud",
-                "leg3": "m5=fb, m6=ud",
-                "leg4": "m7=fb, m8=ud",
-                "leg5": "m9=fb, m10=ud",
-                "leg6": "m11=fb, m12=ud",
-                "sim_mapping": "fb→coxa, ud→femur(65%)+tibia(35%)",
+            "motor_mapping_18dof": {
+                "note": "实机 18 关节与仿真 1:1：同名、同单位 rad",
+                "joints_per_leg": [
+                    "leg{N}_coxa_joint",
+                    "leg{N}_femur_joint",
+                    "leg{N}_tibia_joint",
+                ],
+                "all_joint_names": all_joint_names(),
+                "deploy": "ctrl[i] = stand[i] + delta[i]，直接下发各关节目标角",
             },
         },
         "per_leg": {
@@ -124,24 +139,50 @@ def main() -> None:
         },
         "actuator": {
             "type": "position",
+            "control_law": "tau = kp*(ctrl-qpos) - kv*qvel  (无 Ki)",
+            "stand_kp": STAND_KP,
+            "stand_kv": STAND_KV,
+            "locomotion_kp": LOCOMOTION_KP,
+            "locomotion_kv": LOCOMOTION_KV,
             "kp": float(model.actuator_gainprm[aid0, 0]),
-            "kv": float(model.actuator_biasprm[aid0, 2]) if model.nu else 12.0,
+            "kv": abs(float(model.actuator_biasprm[aid0, 2])) if model.nu else 12.0,
             "forcerange_Nm": model.actuator_forcerange[aid0].tolist(),
             "count": int(model.nu),
+        },
+        "joint_limits_deg": joint_limits_deg(model),
+        "sim_to_real_mapping": {
+            "dof_sim": 18,
+            "dof_real": 18,
+            "mapping": "1:1 同名关节角（rad）",
+            "joint_names": all_joint_names(),
+            "gait_lift_split_note": (
+                f"步态抬脚偏置在仿真链内分配 femur*{FEMUR_UD_RATIO}+tibia*{TIBIA_UD_RATIO}，"
+                "实机直接控制 femur/tibia 两关节"
+            ),
+            "forward_axis": f"base_link +{BODY_FORWARD_AXIS}",
         },
         "calibrated_poses": {
             "stand": {"body_height_m": stand_bz, "joints_rad": stand_pose},
             "prone": {"body_height_m": prone_bz, "joints_rad": prone_pose},
         },
         "gait_design_reference": {
-            "test40_crawl_cycle_s": CYCLE_TIME_S,
-            "sim_slowdown": CRAWL_PHASE_SLOWDOWN,
-            "effective_cycle_s": CYCLE_TIME_S * CRAWL_PHASE_SLOWDOWN,
-            "swing_fb_deg": CRAWL_SWING_FB_DEG,
-            "lift_ud_deg": CRAWL_LIFT_UD_DEG,
-            "enable_lift_ud_deg": BODY_LIFT_EVEN_DEG,
-            "crawl_steps": [
-                {"name": s.name, "duration_ms": s.duration_ms} for s in FORWARD_CRAWL_STEPS
+            "planner": "joint_tripod_gait",
+            "cycle_s": CYCLE_TIME_S,
+            "sim_slowdown": PHASE_SLOWDOWN,
+            "effective_cycle_s": CYCLE_TIME_S,
+            "swing_fb_deg": SWING_FWD_DEG,
+            "lift_ud_deg": LIFT_UD_DEG,
+            "stance_rear_deg": STANCE_REAR_DEG,
+            "push_fb_deg": PUSH_FWD_DEG,
+            "test40_reference": {
+                "swing_fb_deg": CRAWL_SWING_FB_DEG,
+                "lift_ud_deg": CRAWL_LIFT_UD_DEG,
+                "enable_lift_ud_deg": BODY_LIFT_EVEN_DEG,
+            },
+            "sim_only_modules": [
+                "body_stabilizer",
+                "ctrl_smoother",
+                "foot_stance_lock blend",
             ],
         },
         "physics": {

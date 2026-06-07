@@ -1,115 +1,149 @@
 {
-  "model_path": "/home/dash/hexapod_sim/six_motor/generated/SIX-MOTOR_sim.xml",
-  "summary": {
-    "dof_total": 24,
-    "actuators": 18,
-    "bodies": 20,
-    "legs": 6,
-    "joints_per_leg": 3,
-    "dof_per_leg": "coxa+ femur+ tibia = 18 leg DOF + 6 base free"
+  "model": "/home/dash/hexapod_sim/six_motor/generated/SIX-MOTOR_sim.xml",
+  "coordinate_frame": {
+    "base": "base_link",
+    "x": "left_right",
+    "y": "forward",
+    "z": "up",
+    "units": "SI (m, rad, kg)"
   },
-  "base_link": {
-    "name": "base_link",
-    "mass_kg": 6.64114,
-    "com_m": [
-      -3.52451e-05,
-      0.00157678,
-      -0.0174625
-    ],
-    "inertia_diag": [
-      0.046256,
-      0.0242104,
-      0.0227668
-    ],
-    "pos_in_parent_m": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "quat_in_parent": [
-      1.0,
-      0.0,
-      0.0,
-      0.0
-    ]
-  },
-  "base_free_joint": {
-    "translation_range": "unbounded",
-    "rotation_range": "unbounded",
-    "typical_stand_height_m": 0.087,
-    "typical_prone_height_m": 0.065,
+  "body": {
+    "base_link": {
+      "name": "base_link",
+      "mass_kg": 6.64114,
+      "com_in_body_m": [
+        -3.52451e-05,
+        0.00157678,
+        -0.0174625
+      ],
+      "inertia_diag": [
+        0.046256,
+        0.0242104,
+        0.0227668
+      ],
+      "pos_in_parent_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "quat_in_parent_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "total_mass_including_legs_kg": 27.318,
+    "stand_body_height_m": 0.087,
+    "prone_body_height_m": 0.065,
     "min_body_height_m": 0.065
   },
-  "tripod_groups": {
-    "A": [
+  "legs": {
+    "count": 6,
+    "dof_per_leg": 3,
+    "joint_names": [
+      "coxa",
+      "femur",
+      "tibia"
+    ],
+    "tripod_A": [
       1,
       3,
       5
     ],
-    "B": [
+    "tripod_B": [
       2,
       4,
       6
-    ]
+    ],
+    "mirror_pairs": [
+      [
+        1,
+        6
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        2,
+        5
+      ]
+    ],
+    "hip_mount_xy_m": {
+      "1": [
+        0.1,
+        0.16209
+      ],
+      "6": [
+        -0.1,
+        0.16209
+      ],
+      "2": [
+        0.16,
+        0.002094
+      ],
+      "5": [
+        -0.16,
+        0.002094
+      ],
+      "3": [
+        0.1,
+        -0.15791
+      ],
+      "4": [
+        -0.1,
+        -0.15791
+      ]
+    },
+    "azimuth_deg": {
+      "1": 60.0,
+      "6": 120.0,
+      "3": -60.0,
+      "4": -120.0,
+      "2": 0.0,
+      "5": 180.0
+    },
+    "motor_mapping_18dof": {
+      "note": "实机 18 关节与仿真 1:1：同名、同单位 rad",
+      "joints_per_leg": [
+        "leg{N}_coxa_joint",
+        "leg{N}_femur_joint",
+        "leg{N}_tibia_joint"
+      ],
+      "all_joint_names": [
+        "leg1_coxa_joint",
+        "leg1_femur_joint",
+        "leg1_tibia_joint",
+        "leg2_coxa_joint",
+        "leg2_femur_joint",
+        "leg2_tibia_joint",
+        "leg3_coxa_joint",
+        "leg3_femur_joint",
+        "leg3_tibia_joint",
+        "leg4_coxa_joint",
+        "leg4_femur_joint",
+        "leg4_tibia_joint",
+        "leg5_coxa_joint",
+        "leg5_femur_joint",
+        "leg5_tibia_joint",
+        "leg6_coxa_joint",
+        "leg6_femur_joint",
+        "leg6_tibia_joint"
+      ],
+      "deploy": "ctrl[i] = stand[i] + delta[i]，直接下发各关节目标角"
+    }
   },
-  "mirror_pairs": [
-    [
-      1,
-      6
-    ],
-    [
-      3,
-      4
-    ],
-    [
-      2,
-      5
-    ]
-  ],
-  "hip_mount_xy_in_base_m": {
-    "1": [
-      0.1,
-      0.16209
-    ],
-    "6": [
-      -0.1,
-      0.16209
-    ],
-    "2": [
-      0.16,
-      0.002094
-    ],
-    "5": [
-      -0.16,
-      0.002094
-    ],
-    "3": [
-      0.1,
-      -0.15791
-    ],
-    "4": [
-      -0.1,
-      -0.15791
-    ]
-  },
-  "leg_azimuth_deg": {
-    "1": 60.0,
-    "6": 120.0,
-    "3": -60.0,
-    "4": -120.0,
-    "2": 0.0,
-    "5": 180.0
-  },
-  "leg_chain": {
+  "per_leg": {
     "1": {
-      "coxa_to_femur_m": 0.08947,
-      "femur_to_tibia_m": 0.21751,
-      "offsets": {
-        "coxa_offset_m": [
+      "chain": {
+        "coxa_body_offset_m": [
           0.1,
           0.16209,
           -0.0015
         ],
+        "coxa_to_femur_length_m": 0.08947,
+        "femur_to_tibia_length_m": 0.21751,
         "femur_offset_m": [
           -0.0300126,
           0.029381,
@@ -120,17 +154,81 @@
           0.0821747,
           -0.0227938
         ]
-      }
+      },
+      "joints": {
+        "coxa": {
+          "name": "leg1_coxa_joint",
+          "type": "hinge",
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "range_rad": [
+            -0.8,
+            0.8
+          ],
+          "range_deg": [
+            -45.84,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "femur": {
+          "name": "leg1_femur_joint",
+          "type": "hinge",
+          "axis": [
+            -0.7145858014523626,
+            0.6995478056306691,
+            0.0
+          ],
+          "range_rad": [
+            -1.4,
+            0.8
+          ],
+          "range_deg": [
+            -80.21,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "tibia": {
+          "name": "leg1_tibia_joint",
+          "type": "hinge",
+          "axis": [
+            -0.7145858014523626,
+            0.6995478056306691,
+            0.0
+          ],
+          "range_rad": [
+            0.0,
+            2.2
+          ],
+          "range_deg": [
+            0.0,
+            126.05
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        }
+      },
+      "stand_foot_in_base_m": [
+        0.25912,
+        0.39446,
+        -0.08858
+      ]
     },
     "2": {
-      "coxa_to_femur_m": 0.08815,
-      "femur_to_tibia_m": 0.21751,
-      "offsets": {
-        "coxa_offset_m": [
+      "chain": {
+        "coxa_body_offset_m": [
           0.16,
           0.002094,
           0.0
         ],
+        "coxa_to_femur_length_m": 0.08815,
+        "femur_to_tibia_length_m": 0.21751,
         "femur_offset_m": [
           -0.0049258,
           0.04171,
@@ -141,17 +239,81 @@
           -0.061482,
           -0.009849
         ]
-      }
+      },
+      "joints": {
+        "coxa": {
+          "name": "leg2_coxa_joint",
+          "type": "hinge",
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "range_rad": [
+            -0.8,
+            0.8
+          ],
+          "range_deg": [
+            -45.84,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "femur": {
+          "name": "leg2_femur_joint",
+          "type": "hinge",
+          "axis": [
+            -0.11727998697013554,
+            0.9930988896662231,
+            0.0
+          ],
+          "range_rad": [
+            -1.4,
+            0.8
+          ],
+          "range_deg": [
+            -80.21,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "tibia": {
+          "name": "leg2_tibia_joint",
+          "type": "hinge",
+          "axis": [
+            -0.11727998697013554,
+            0.9930988896662231,
+            0.0
+          ],
+          "range_rad": [
+            0.0,
+            2.2
+          ],
+          "range_deg": [
+            0.0,
+            126.05
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        }
+      },
+      "stand_foot_in_base_m": [
+        0.37483,
+        -0.00218,
+        -0.06984
+      ]
     },
     "3": {
-      "coxa_to_femur_m": 0.08815,
-      "femur_to_tibia_m": 0.21751,
-      "offsets": {
-        "coxa_offset_m": [
+      "chain": {
+        "coxa_body_offset_m": [
           0.1,
           -0.15791,
           0.0
         ],
+        "coxa_to_femur_length_m": 0.08815,
+        "femur_to_tibia_length_m": 0.21751,
         "femur_offset_m": [
           0.0321403,
           0.0270371,
@@ -162,17 +324,81 @@
           -0.20728,
           -0.0205273
         ]
-      }
+      },
+      "joints": {
+        "coxa": {
+          "name": "leg3_coxa_joint",
+          "type": "hinge",
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "range_rad": [
+            -0.8,
+            0.8
+          ],
+          "range_deg": [
+            -45.84,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "femur": {
+          "name": "leg3_femur_joint",
+          "type": "hinge",
+          "axis": [
+            0.7652450726424225,
+            0.6437390611082208,
+            0.0
+          ],
+          "range_rad": [
+            -1.4,
+            0.8
+          ],
+          "range_deg": [
+            -80.21,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "tibia": {
+          "name": "leg3_tibia_joint",
+          "type": "hinge",
+          "axis": [
+            0.7652450726424225,
+            0.6437390611082208,
+            0.0
+          ],
+          "range_rad": [
+            0.0,
+            2.2
+          ],
+          "range_deg": [
+            0.0,
+            126.05
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        }
+      },
+      "stand_foot_in_base_m": [
+        0.18785,
+        -0.36368,
+        -0.08978
+      ]
     },
     "4": {
-      "coxa_to_femur_m": 0.08815,
-      "femur_to_tibia_m": 0.21751,
-      "offsets": {
-        "coxa_offset_m": [
+      "chain": {
+        "coxa_body_offset_m": [
           -0.1,
           -0.15791,
           0.0
         ],
+        "coxa_to_femur_length_m": 0.08815,
+        "femur_to_tibia_length_m": 0.21751,
         "femur_offset_m": [
           0.0264745,
           -0.0326051,
@@ -183,17 +409,81 @@
           -0.0577905,
           -0.0346271
         ]
-      }
+      },
+      "joints": {
+        "coxa": {
+          "name": "leg4_coxa_joint",
+          "type": "hinge",
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "range_rad": [
+            -0.8,
+            0.8
+          ],
+          "range_deg": [
+            -45.84,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "femur": {
+          "name": "leg4_femur_joint",
+          "type": "hinge",
+          "axis": [
+            0.6303461555971857,
+            -0.776314191628524,
+            0.0
+          ],
+          "range_rad": [
+            -1.4,
+            0.8
+          ],
+          "range_deg": [
+            -80.21,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "tibia": {
+          "name": "leg4_tibia_joint",
+          "type": "hinge",
+          "axis": [
+            0.6303461555971857,
+            -0.776314191628524,
+            0.0
+          ],
+          "range_rad": [
+            0.0,
+            2.2
+          ],
+          "range_deg": [
+            0.0,
+            126.05
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        }
+      },
+      "stand_foot_in_base_m": [
+        -0.23978,
+        -0.39713,
+        -0.08752
+      ]
     },
     "5": {
-      "coxa_to_femur_m": 0.08815,
-      "femur_to_tibia_m": 0.21751,
-      "offsets": {
-        "coxa_offset_m": [
+      "chain": {
+        "coxa_body_offset_m": [
           -0.16,
           0.002094,
           0.0
         ],
+        "coxa_to_femur_length_m": 0.08815,
+        "femur_to_tibia_length_m": 0.21751,
         "femur_offset_m": [
           0.0017414,
           -0.041964,
@@ -204,17 +494,81 @@
           0.077134,
           -1.8623e-05
         ]
-      }
+      },
+      "joints": {
+        "coxa": {
+          "name": "leg5_coxa_joint",
+          "type": "hinge",
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "range_rad": [
+            -0.8,
+            0.8
+          ],
+          "range_deg": [
+            -45.84,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "femur": {
+          "name": "leg5_femur_joint",
+          "type": "hinge",
+          "axis": [
+            0.041461005097195545,
+            -0.9991401228337947,
+            0.0
+          ],
+          "range_rad": [
+            -1.4,
+            0.8
+          ],
+          "range_deg": [
+            -80.21,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "tibia": {
+          "name": "leg5_tibia_joint",
+          "type": "hinge",
+          "axis": [
+            0.041461005097195545,
+            -0.9991401228337947,
+            0.0
+          ],
+          "range_rad": [
+            0.0,
+            2.2
+          ],
+          "range_deg": [
+            0.0,
+            126.05
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        }
+      },
+      "stand_foot_in_base_m": [
+        -0.43408,
+        -0.05782,
+        -0.08659
+      ]
     },
     "6": {
-      "coxa_to_femur_m": 0.08815,
-      "femur_to_tibia_m": 0.21751,
-      "offsets": {
-        "coxa_offset_m": [
+      "chain": {
+        "coxa_body_offset_m": [
           -0.1,
           0.16209,
           0.0
         ],
+        "coxa_to_femur_length_m": 0.08815,
+        "femur_to_tibia_length_m": 0.21751,
         "femur_offset_m": [
           -0.037417,
           -0.019077,
@@ -225,389 +579,188 @@
           0.21672,
           -0.011406
         ]
-      }
+      },
+      "joints": {
+        "coxa": {
+          "name": "leg6_coxa_joint",
+          "type": "hinge",
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "range_rad": [
+            -0.8,
+            0.8
+          ],
+          "range_deg": [
+            -45.84,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "femur": {
+          "name": "leg6_femur_joint",
+          "type": "hinge",
+          "axis": [
+            -0.8908896434214916,
+            -0.45421981819855417,
+            0.0
+          ],
+          "range_rad": [
+            -1.4,
+            0.8
+          ],
+          "range_deg": [
+            -80.21,
+            45.84
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        },
+        "tibia": {
+          "name": "leg6_tibia_joint",
+          "type": "hinge",
+          "axis": [
+            -0.8908896434214916,
+            -0.45421981819855417,
+            0.0
+          ],
+          "range_rad": [
+            0.0,
+            2.2
+          ],
+          "range_deg": [
+            0.0,
+            126.05
+          ],
+          "damping": 3.0,
+          "armature": 0.04
+        }
+      },
+      "stand_foot_in_base_m": [
+        -0.09982,
+        0.44299,
+        -0.08764
+      ]
     }
   },
-  "joints": [
-    {
-      "name": "free_joint (base)",
-      "type": "free",
-      "dof": 6,
-      "note": "qpos[0:3] xyz, qpos[3:7] quat wxyz"
-    },
-    {
-      "name": "leg1_coxa_joint",
-      "type": "hinge",
-      "qpos_adr": 13,
-      "axis": [
-        0.0,
-        0.0,
-        1.0
-      ],
-      "range_rad": [
-        -0.8,
-        0.8
-      ],
-      "range_deg": [
-        -45.836623610465864,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg1_femur_joint",
-      "type": "hinge",
-      "qpos_adr": 14,
-      "axis": [
-        -0.7145858014523626,
-        0.6995478056306691,
-        0.0
-      ],
-      "range_rad": [
-        -1.4,
-        0.8
-      ],
-      "range_deg": [
-        -80.21409131831524,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg1_tibia_joint",
-      "type": "hinge",
-      "qpos_adr": 15,
-      "axis": [
-        -0.7145858014523626,
-        0.6995478056306691,
-        0.0
-      ],
-      "range_rad": [
-        0.0,
-        2.2
-      ],
-      "range_deg": [
-        0.0,
-        126.05071492878112
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg2_coxa_joint",
-      "type": "hinge",
-      "qpos_adr": 22,
-      "axis": [
-        0.0,
-        0.0,
-        1.0
-      ],
-      "range_rad": [
-        -0.8,
-        0.8
-      ],
-      "range_deg": [
-        -45.836623610465864,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg2_femur_joint",
-      "type": "hinge",
-      "qpos_adr": 23,
-      "axis": [
-        -0.11727998697013554,
-        0.9930988896662231,
-        0.0
-      ],
-      "range_rad": [
-        -1.4,
-        0.8
-      ],
-      "range_deg": [
-        -80.21409131831524,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg2_tibia_joint",
-      "type": "hinge",
-      "qpos_adr": 24,
-      "axis": [
-        -0.11727998697013554,
-        0.9930988896662231,
-        0.0
-      ],
-      "range_rad": [
-        0.0,
-        2.2
-      ],
-      "range_deg": [
-        0.0,
-        126.05071492878112
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg3_coxa_joint",
-      "type": "hinge",
-      "qpos_adr": 16,
-      "axis": [
-        0.0,
-        0.0,
-        1.0
-      ],
-      "range_rad": [
-        -0.8,
-        0.8
-      ],
-      "range_deg": [
-        -45.836623610465864,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg3_femur_joint",
-      "type": "hinge",
-      "qpos_adr": 17,
-      "axis": [
-        0.7652450726424225,
-        0.6437390611082208,
-        0.0
-      ],
-      "range_rad": [
-        -1.4,
-        0.8
-      ],
-      "range_deg": [
-        -80.21409131831524,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg3_tibia_joint",
-      "type": "hinge",
-      "qpos_adr": 18,
-      "axis": [
-        0.7652450726424225,
-        0.6437390611082208,
-        0.0
-      ],
-      "range_rad": [
-        0.0,
-        2.2
-      ],
-      "range_deg": [
-        0.0,
-        126.05071492878112
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg4_coxa_joint",
-      "type": "hinge",
-      "qpos_adr": 19,
-      "axis": [
-        0.0,
-        0.0,
-        1.0
-      ],
-      "range_rad": [
-        -0.8,
-        0.8
-      ],
-      "range_deg": [
-        -45.836623610465864,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg4_femur_joint",
-      "type": "hinge",
-      "qpos_adr": 20,
-      "axis": [
-        0.6303461555971857,
-        -0.776314191628524,
-        0.0
-      ],
-      "range_rad": [
-        -1.4,
-        0.8
-      ],
-      "range_deg": [
-        -80.21409131831524,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg4_tibia_joint",
-      "type": "hinge",
-      "qpos_adr": 21,
-      "axis": [
-        0.6303461555971857,
-        -0.776314191628524,
-        0.0
-      ],
-      "range_rad": [
-        0.0,
-        2.2
-      ],
-      "range_deg": [
-        0.0,
-        126.05071492878112
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg5_coxa_joint",
-      "type": "hinge",
-      "qpos_adr": 10,
-      "axis": [
-        0.0,
-        0.0,
-        1.0
-      ],
-      "range_rad": [
-        -0.8,
-        0.8
-      ],
-      "range_deg": [
-        -45.836623610465864,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg5_femur_joint",
-      "type": "hinge",
-      "qpos_adr": 11,
-      "axis": [
-        0.041461005097195545,
-        -0.9991401228337947,
-        0.0
-      ],
-      "range_rad": [
-        -1.4,
-        0.8
-      ],
-      "range_deg": [
-        -80.21409131831524,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg5_tibia_joint",
-      "type": "hinge",
-      "qpos_adr": 12,
-      "axis": [
-        0.041461005097195545,
-        -0.9991401228337947,
-        0.0
-      ],
-      "range_rad": [
-        0.0,
-        2.2
-      ],
-      "range_deg": [
-        0.0,
-        126.05071492878112
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg6_coxa_joint",
-      "type": "hinge",
-      "qpos_adr": 7,
-      "axis": [
-        0.0,
-        0.0,
-        1.0
-      ],
-      "range_rad": [
-        -0.8,
-        0.8
-      ],
-      "range_deg": [
-        -45.836623610465864,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg6_femur_joint",
-      "type": "hinge",
-      "qpos_adr": 8,
-      "axis": [
-        -0.8908896434214916,
-        -0.45421981819855417,
-        0.0
-      ],
-      "range_rad": [
-        -1.4,
-        0.8
-      ],
-      "range_deg": [
-        -80.21409131831524,
-        45.836623610465864
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    },
-    {
-      "name": "leg6_tibia_joint",
-      "type": "hinge",
-      "qpos_adr": 9,
-      "axis": [
-        -0.8908896434214916,
-        -0.45421981819855417,
-        0.0
-      ],
-      "range_rad": [
-        0.0,
-        2.2
-      ],
-      "range_deg": [
-        0.0,
-        126.05071492878112
-      ],
-      "damping": 3.0,
-      "armature": 0.04
-    }
-  ],
-  "actuators": {
-    "per_joint": {
-      "name": "leg1_coxa_joint_act",
-      "gain_kp": 280.0,
-      "bias_kp": 280.0,
-      "forcerange_Nm": [
-        -200.0,
-        200.0
-      ]
-    },
-    "count": 18,
-    "note": "position servo: tau = kp*(ctrl-qpos) - kv*qvel"
+  "actuator": {
+    "type": "position",
+    "control_law": "tau = kp*(ctrl-qpos) - kv*qvel  (无 Ki)",
+    "stand_kp": 280.0,
+    "stand_kv": 12.0,
+    "locomotion_kp": 130.0,
+    "locomotion_kv": 30.0,
+    "kp": 280.0,
+    "kv": 12.0,
+    "forcerange_Nm": [
+      -100.0,
+      100.0
+    ],
+    "count": 18
+  },
+  "joint_limits_deg": {
+    "leg1_coxa_joint": [
+      -45.836623610465864,
+      45.836623610465864
+    ],
+    "leg1_femur_joint": [
+      -80.21409131831524,
+      45.836623610465864
+    ],
+    "leg1_tibia_joint": [
+      0.0,
+      126.05071492878112
+    ],
+    "leg2_coxa_joint": [
+      -45.836623610465864,
+      45.836623610465864
+    ],
+    "leg2_femur_joint": [
+      -80.21409131831524,
+      45.836623610465864
+    ],
+    "leg2_tibia_joint": [
+      0.0,
+      126.05071492878112
+    ],
+    "leg3_coxa_joint": [
+      -45.836623610465864,
+      45.836623610465864
+    ],
+    "leg3_femur_joint": [
+      -80.21409131831524,
+      45.836623610465864
+    ],
+    "leg3_tibia_joint": [
+      0.0,
+      126.05071492878112
+    ],
+    "leg4_coxa_joint": [
+      -45.836623610465864,
+      45.836623610465864
+    ],
+    "leg4_femur_joint": [
+      -80.21409131831524,
+      45.836623610465864
+    ],
+    "leg4_tibia_joint": [
+      0.0,
+      126.05071492878112
+    ],
+    "leg5_coxa_joint": [
+      -45.836623610465864,
+      45.836623610465864
+    ],
+    "leg5_femur_joint": [
+      -80.21409131831524,
+      45.836623610465864
+    ],
+    "leg5_tibia_joint": [
+      0.0,
+      126.05071492878112
+    ],
+    "leg6_coxa_joint": [
+      -45.836623610465864,
+      45.836623610465864
+    ],
+    "leg6_femur_joint": [
+      -80.21409131831524,
+      45.836623610465864
+    ],
+    "leg6_tibia_joint": [
+      0.0,
+      126.05071492878112
+    ]
+  },
+  "sim_to_real_mapping": {
+    "dof_sim": 18,
+    "dof_real": 18,
+    "mapping": "1:1 同名关节角（rad）",
+    "joint_names": [
+      "leg1_coxa_joint",
+      "leg1_femur_joint",
+      "leg1_tibia_joint",
+      "leg2_coxa_joint",
+      "leg2_femur_joint",
+      "leg2_tibia_joint",
+      "leg3_coxa_joint",
+      "leg3_femur_joint",
+      "leg3_tibia_joint",
+      "leg4_coxa_joint",
+      "leg4_femur_joint",
+      "leg4_tibia_joint",
+      "leg5_coxa_joint",
+      "leg5_femur_joint",
+      "leg5_tibia_joint",
+      "leg6_coxa_joint",
+      "leg6_femur_joint",
+      "leg6_tibia_joint"
+    ],
+    "gait_lift_split_note": "步态抬脚偏置在仿真链内分配 femur*0.65+tibia*0.35，实机直接控制 femur/tibia 两关节",
+    "forward_axis": "base_link +Y"
   },
   "calibrated_poses": {
     "stand": {
@@ -657,281 +810,29 @@
       }
     }
   },
-  "stand_foot_metrics": {
-    "1": {
-      "foot_point_world_m": [
-        0.2591197881321794,
-        0.3944592511636726,
-        -0.0015793140859694244
-      ],
-      "foot_normal_world": [
-        0.0052064506764060905,
-        0.009166197552293701,
-        -0.9999444353021754
-      ],
-      "tilt_deg": 0.6
-    },
-    "2": {
-      "foot_point_world_m": [
-        0.3748325481126986,
-        -0.002176732022074218,
-        0.01716157569115276
-      ],
-      "foot_normal_world": [
-        -0.026253651742161734,
-        0.008205809725868896,
-        -0.9996216336469236
-      ],
-      "tilt_deg": 1.58
-    },
-    "3": {
-      "foot_point_world_m": [
-        0.18785313792928351,
-        -0.3636805898382409,
-        -0.0027751866720214236
-      ],
-      "foot_normal_world": [
-        0.0008423718124588819,
-        0.005135010825674587,
-        -0.9999864609441219
-      ],
-      "tilt_deg": 0.3
-    },
-    "4": {
-      "foot_point_world_m": [
-        -0.23977803442862183,
-        -0.3971251615492032,
-        -0.0005174130627504658
-      ],
-      "foot_normal_world": [
-        0.0008355336280107493,
-        0.011614994666604837,
-        -0.9999321945914389
-      ],
-      "tilt_deg": 0.67
-    },
-    "5": {
-      "foot_point_world_m": [
-        -0.43407865142961277,
-        -0.05781717026033545,
-        0.0004127138957955301
-      ],
-      "foot_normal_world": [
-        -0.005752279325312718,
-        0.002189540908351319,
-        -0.9999810584161952
-      ],
-      "tilt_deg": 0.35
-    },
-    "6": {
-      "foot_point_world_m": [
-        -0.09981889680471681,
-        0.44299240503766035,
-        -0.0006394301640711975
-      ],
-      "foot_normal_world": [
-        0.00037895269503359405,
-        0.005520098379582248,
-        -0.9999846923362051
-      ],
-      "tilt_deg": 0.32
-    }
-  },
-  "stand_foot_in_base_m": {
-    "1": [
-      0.2591197881321794,
-      0.3944592511636726,
-      -0.08857931408596942
-    ],
-    "2": [
-      0.3748325481126986,
-      -0.002176732022074218,
-      -0.06983842430884724
-    ],
-    "3": [
-      0.18785313792928351,
-      -0.3636805898382409,
-      -0.08977518667202142
-    ],
-    "4": [
-      -0.23977803442862183,
-      -0.3971251615492032,
-      -0.08751741306275046
-    ],
-    "5": [
-      -0.43407865142961277,
-      -0.05781717026033545,
-      -0.08658728610420446
-    ],
-    "6": [
-      -0.09981889680471681,
-      0.44299240503766035,
-      -0.08763943016407119
-    ]
-  },
-  "foot_pad_collision": {
-    "1": {
-      "size_m": [
-        0.028,
-        0.022,
-        0.005
-      ],
-      "pos_in_tibia_m": [
-        0.065574,
-        0.066989,
-        -0.194185
-      ],
-      "quat": [
-        0.035289017915656674,
-        -0.7066663587629414,
-        0.7066663587629414,
-        0.0
-      ]
-    },
-    "2": {
-      "size_m": [
-        0.028,
-        0.022,
-        0.005
-      ],
-      "pos_in_tibia_m": [
-        -0.058638,
-        0.07815,
-        -0.195335
-      ],
-      "quat": [
-        0.1846359732092299,
-        0.10853298425181085,
-        -0.9767958582664427,
-        0.0
-      ]
-    },
-    "3": {
-      "size_m": [
-        0.028,
-        0.022,
-        0.005
-      ],
-      "pos_in_tibia_m": [
-        0.062005,
-        0.057541,
-        -0.201359
-      ],
-      "quat": [
-        0.07123401494211978,
-        -0.7719911619336551,
-        -0.6316291324911724,
-        0.0
-      ]
-    },
-    "4": {
-      "size_m": [
-        0.028,
-        0.022,
-        0.005
-      ],
-      "pos_in_tibia_m": [
-        -0.034984,
-        -0.028428,
-        -0.210867
-      ],
-      "quat": [
-        0.08507097509960161,
-        -0.6436008116171045,
-        0.7606187773657754,
-        0.0
-      ]
-    },
-    "5": {
-      "size_m": [
-        0.028,
-        0.022,
-        0.005
-      ],
-      "pos_in_tibia_m": [
-        -0.099802,
-        -0.004162,
-        -0.191102
-      ],
-      "quat": [
-        0.049813975723737705,
-        0.0,
-        -0.9987585132666429,
-        0.0
-      ]
-    },
-    "6": {
-      "size_m": [
-        0.028,
-        0.022,
-        0.005
-      ],
-      "pos_in_tibia_m": [
-        -0.050251,
-        0.098546,
-        -0.185098
-      ],
-      "quat": [
-        0.07832402374718185,
-        -0.8916792703496165,
-        -0.44584013517495985,
-        0.0
-      ]
-    }
-  },
-  "gait_reference_test40": {
-    "cycle_time_s_nominal": 0.4,
-    "sim_phase_slowdown": 8.0,
-    "effective_cycle_s": 3.2,
-    "swing_fb_deg": 34.0,
+  "gait_design_reference": {
+    "planner": "joint_tripod_gait",
+    "cycle_s": 3.54,
+    "sim_slowdown": 1.5,
+    "effective_cycle_s": 3.54,
+    "swing_fb_deg": 28.0,
     "lift_ud_deg": 24.0,
-    "body_lift_even_deg": 30.0,
-    "forward_crawl_steps": [
-      {
-        "name": "1_A_lift",
-        "duration_ms": 26
-      },
-      {
-        "name": "2a_A_swing",
-        "duration_ms": 70
-      },
-      {
-        "name": "2b_A_land",
-        "duration_ms": 66
-      },
-      {
-        "name": "3a_A_push_mid",
-        "duration_ms": 19
-      },
-      {
-        "name": "3b_A_push_end",
-        "duration_ms": 19
-      },
-      {
-        "name": "4_B_lift",
-        "duration_ms": 26
-      },
-      {
-        "name": "5a_B_swing",
-        "duration_ms": 70
-      },
-      {
-        "name": "5b_B_land",
-        "duration_ms": 66
-      },
-      {
-        "name": "6a_B_push_mid",
-        "duration_ms": 19
-      },
-      {
-        "name": "6b_B_push_end",
-        "duration_ms": 19
-      }
+    "stance_rear_deg": 26.0,
+    "push_fb_deg": 14.0,
+    "test40_reference": {
+      "swing_fb_deg": 34.0,
+      "lift_ud_deg": 24.0,
+      "enable_lift_ud_deg": 30.0
+    },
+    "sim_only_modules": [
+      "body_stabilizer",
+      "ctrl_smoother",
+      "foot_stance_lock blend"
     ]
   },
   "physics": {
     "timestep_s": 0.002,
-    "gravity": [
+    "gravity_m_s2": [
       0.0,
       0.0,
       -9.81

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-六足使能/失能状态机 — 对齐 TEST-4.0 Cloud-TAC App.c 行为。
+六足使能/失能状态机 — 对齐 TEST-4.0 时序；实机与仿真均为 18 关节（1:1）。
 
-实机 12-DOF（每腿 fb+ud）映射到仿真 18-DOF（coxa+femur+tibia）：
-  奇数电机 fb → coxa  水平摆幅 ±30°
-  偶数电机 ud → femur/tibia  竖直抬腿 24° / 撑起 30°
+每腿 3 关节：coxa / femur / tibia，关节名与单位（rad）与 MuJoCo 一致。
+趴地生成仍用 femur+tibia 分配撑起偏置（链内运动学，非 12 电机映射）。
 
 状态：
   DISABLED   — 无力矩，腿趴地
@@ -28,12 +27,14 @@ CRAWL_SWING_FB_DEG = 34.0  # R04_CRAWL_SWING_FB_DEG
 CRAWL_LIFT_UD_DEG = 24.0   # R04_CRAWL_LIFT_UD_DEG
 CRAWL_PUSH_HALF_FB_DEG = 17.0
 BODY_LIFT_EVEN_DEG = 30.0
+# 仿真撑起角：过大则右腿离地；8° 可保持六足贴地
+ENABLE_LIFT_DEG = 6.0
 EVEN_ENABLE_RAMP_S = 4.0
 POST_ENABLE_SOFT_S = 0.6
 EVEN_RAMP_DOWN_S = 5.0
 
 # 腿号 1~6：左上前、左中、左下、右下、右中、右上前（与 TRIPOD_A/B 一致）
-# 偶轴撑起方向：腿 1/2/3 femur 减小，腿 4/5/6 femur 增大（对应 m2/m4/m6 ud 下压）
+# 撑起方向：腿 1/2/3 femur 减小，腿 4/5/6 femur 增大
 _LEG_UD_LIFT_SIGN = {1: -1.0, 2: -1.0, 3: -1.0, 4: 1.0, 5: 1.0, 6: 1.0}
 
 LEG_JOINTS = ("coxa", "femur", "tibia")
@@ -84,6 +85,19 @@ def _apply_ud_delta(
     pose[f"leg{leg}_tibia_joint"] += dt
 
 
+def _blend_joint_poses(
+    start: Dict[str, float],
+    end: Dict[str, float],
+    u: float,
+) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for jn in _joint_names():
+        s = start.get(jn, end.get(jn, 0.0))
+        e = end.get(jn, s)
+        out[jn] = s + (e - s) * u
+    return out
+
+
 @dataclass
 class EnableController:
     """使能状态机 + 关节目标生成。"""
@@ -98,10 +112,36 @@ class EnableController:
     ramp_t: float = 0.0
     soft_remain_s: float = 0.0
     prone_body_z: float = 0.065
+    walk_body_z: float = 0.050
+    stand_body_z: float = 0.087
+    ramp_body_z: float = 0.065
     _kp_backup: float = 280.0
 
-    def load_stand(self, stand: Dict[str, float]) -> None:
+    def load_stand(
+        self,
+        stand: Dict[str, float],
+        *,
+        body_z: float | None = None,
+        prone_body_z: float | None = None,
+    ) -> None:
+        """使能目标：严格使用 stand_pose_flat.json，不做物理改写。"""
         self.stand_pose = dict(stand)
+        if body_z is not None:
+            self.walk_body_z = float(body_z)
+            floor = self._physics_body_z_floor(prone_body_z)
+            self.stand_body_z = max(float(body_z), floor)
+
+    @staticmethod
+    def _physics_body_z_floor(prone_body_z: float | None) -> float:
+        try:
+            from foot_kinematics import PRONE_BODY_HEIGHT
+
+            floor = float(PRONE_BODY_HEIGHT)
+        except ImportError:
+            floor = 0.058
+        if prone_body_z is not None:
+            floor = max(floor, float(prone_body_z))
+        return floor
 
     def init_disabled(
         self,
@@ -122,20 +162,24 @@ class EnableController:
         set_actuator_torque_enabled(model, False, self._kp_backup)
 
     def enable(self, model: mujoco.MjModel, data: mujoco.MjData) -> None:
-        """Sbus[4] 上升沿：从当前趴地角 4s 插值到标定站立角（物理支撑）。"""
+        """Sbus[4] 上升沿：从趴地角 4s 插值到标定站立角（运动学撑起）。"""
         if self.phase in (EnablePhase.ENABLED, EnablePhase.LIFT_RAMP, EnablePhase.SOFT_STAND):
             return
         if not self.stand_pose:
             self.stand_pose = read_joint_pose(model, data)
-        self.zero_pose = read_joint_pose(model, data)
-        self.prone_pose = dict(self.zero_pose)
+        self.zero_pose = dict(self.prone_pose)
         self.lift_start.clear()
         self.lift_target.clear()
         self.ramp_t = 0.0
         self.soft_remain_s = 0.0
+        self.ramp_body_z = float(self.prone_body_z)
         self.phase = EnablePhase.LIFT_RAMP
         set_actuator_torque_enabled(model, True, self._kp_backup)
-        print("[使能] 开始撑起 (4s smootherstep)…")
+        print(
+            f"[使能] 开始撑起 (4s)  "
+            f"z {self.prone_body_z*1000:.1f}→{self.stand_body_z*1000:.1f} mm",
+            flush=True,
+        )
 
     def disable(self, model: mujoco.MjModel, data: mujoco.MjData) -> None:
         """失能：5s 缓降回趴地角。"""
@@ -170,19 +214,20 @@ class EnableController:
         if self.phase == EnablePhase.LIFT_RAMP:
             self.ramp_t += dt
             u = smootherstep(self.ramp_t / EVEN_ENABLE_RAMP_S)
-            targets: Dict[str, float] = {}
-            for jn in _joint_names():
-                s = self.zero_pose.get(jn, self.stand_pose[jn])
-                e = self.stand_pose[jn]
-                targets[jn] = s + (e - s) * u
+            # 撑起：机身 z 抬高 + 关节解算，足端保持贴地
+            self.ramp_body_z = self.prone_body_z + (
+                self.stand_body_z - self.prone_body_z
+            ) * u
             if self.ramp_t >= EVEN_ENABLE_RAMP_S:
                 self.phase = EnablePhase.SOFT_STAND
                 self.soft_remain_s = POST_ENABLE_SOFT_S
+                self.ramp_body_z = float(self.stand_body_z)
                 print("[使能] 软站立 0.6s…")
-            return targets
+            return _blend_joint_poses(self.zero_pose, self.stand_pose, u)
 
         if self.phase == EnablePhase.SOFT_STAND:
             self.soft_remain_s -= dt
+            self.ramp_body_z = self.stand_body_z
             if self.soft_remain_s <= 0.0:
                 self.phase = EnablePhase.ENABLED
                 print("[使能] 完成，三角步态已解锁（I/K/J/L）")
@@ -191,6 +236,9 @@ class EnableController:
         if self.phase == EnablePhase.RAMP_DOWN:
             self.ramp_t += dt
             alpha = min(1.0, self.ramp_t / EVEN_RAMP_DOWN_S)
+            self.ramp_body_z = self.stand_body_z + (
+                self.prone_body_z - self.stand_body_z
+            ) * alpha
             targets: Dict[str, float] = {}
             for jn in _joint_names():
                 s = self.ramp_down_start.get(jn, 0.0)
@@ -209,8 +257,8 @@ class EnableController:
         return dict(self.stand_pose)
 
 
-STAND_KP = 280.0
-STAND_KV = 12.0
+STAND_KP = 140.0
+STAND_KV = 18.0
 LOCOMOTION_KP = 130.0
 LOCOMOTION_KV = 30.0
 
@@ -236,6 +284,31 @@ def set_actuator_torque_enabled(
         set_actuator_gains(model, kp_nominal, kv_nominal)
     else:
         set_actuator_gains(model, 0.0, 0.0)
+
+
+def build_lifted_stand_pose(
+    prone_pose: Dict[str, float],
+    lift_deg: float = ENABLE_LIFT_DEG,
+    *,
+    coxa_pose: Dict[str, float] | None = None,
+) -> Dict[str, float]:
+    """
+    从趴地角沿 TEST-4.0 偶轴方向撑起（腿1-3 femur↓，腿4-6 femur↑）。
+    coxa_pose 非空时保留其中 coxa（手动标定值）。
+    """
+    out = dict(prone_pose)
+    lift_rad = _deg2rad(lift_deg)
+    for leg in range(1, 7):
+        sign = _LEG_UD_LIFT_SIGN[leg]
+        df, dt = _leg_femur_tibia_split(sign * lift_rad)
+        out[f"leg{leg}_femur_joint"] += df
+        out[f"leg{leg}_tibia_joint"] += dt
+    if coxa_pose is not None:
+        for leg in range(1, 7):
+            jn = f"leg{leg}_coxa_joint"
+            if jn in coxa_pose:
+                out[jn] = float(coxa_pose[jn])
+    return out
 
 
 def make_prone_pose_analytic(stand_pose: Dict[str, float]) -> Dict[str, float]:

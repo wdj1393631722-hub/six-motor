@@ -56,7 +56,7 @@ def main() -> None:
 
     model = mujoco.MjModel.from_xml_path(MODEL_PATH)
     data = mujoco.MjData(model)
-    max_v = 0.02
+    max_v = 0.06
     gait = create_forward_tripod_gait(model=model, speed_mps=max_v)
     reset_stand(model, data, gait)
 

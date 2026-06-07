@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 
 import mujoco
@@ -15,6 +16,14 @@ GENERATED = os.path.join(SCRIPT_DIR, "generated")
 URDF_IN = os.path.join(GENERATED, "SIX-MOTOR_fixed.urdf")
 OUT = os.path.join(GENERATED, "SIX-MOTOR_sim.xml")
 DEFAULT_SRC = "/media/dash/OS/six-motor-URDF/SIX-MOTOR-NEW"
+
+# MuJoCo geom friction: (滑动, 扭转, 滚动)
+FLOOR_FRICTION = (2.0, 0.05, 0.0001)
+FOOT_FRICTION = (3.5, 0.12, 0.0001)
+
+
+def _friction_attr(friction: tuple[float, float, float]) -> str:
+    return f'"{friction[0]} {friction[1]} {friction[2]}"'
 
 
 def ensure_assets(src_dir: str) -> None:
@@ -44,7 +53,7 @@ def build_with_mjspec(urdf_path: str, out_path: str) -> mujoco.MjModel:
         type=mujoco.mjtGeom.mjGEOM_PLANE,
         size=[15, 15, 0.05],
         rgba=[0.4, 0.43, 0.46, 1],
-        friction=[1.4, 0.005, 0.0001],
+        friction=list(FLOOR_FRICTION),
     )
     _ = floor
 
@@ -84,7 +93,7 @@ def _patch_terrain(xml: str) -> str:
         )
 
     floor_geom = """    <geom name="floor" type="plane" size="15 15 0.05" pos="0 0 0" material="mat_ground"
-          friction="1.4 0.005 0.0001" solref="0.02 1" solimp="0.9 0.95 0.001" condim="3"/>"""
+          friction={_friction_attr(FLOOR_FRICTION)} solref="0.004 1.2" solimp="0.92 0.98 0.001" condim="3"/>"""
 
     if 'light name="sun"' not in xml:
         lights = """    <light name="sun" pos="0 0 4" dir="0 0 -1" diffuse="0.95 0.95 0.92" castshadow="true"/>
@@ -132,10 +141,17 @@ def _patch_sim_xml(path: str) -> None:
             1,
         )
 
+    def _position_actuator(m: re.Match) -> str:
+        jname = m.group(2)
+        lo_hi = m.group(3)
+        return (
+            f'    <position name="{m.group(1)}" joint="{jname}" kp="280" kv="12" '
+            f'ctrlrange="{lo_hi}" forcelimited="true" forcerange="-100 100"/>'
+        )
+
     xml = re.sub(
         r'    <general name="([^"]+)" joint="([^"]+)" ctrlrange="([^"]+)" gainprm="250"/>',
-        r'    <position name="\1" joint="\2" kp="280" kv="12" ctrlrange="\3" '
-        r'forcelimited="true" forcerange="-200 200"/>',
+        _position_actuator,
         xml,
     )
 
@@ -148,7 +164,7 @@ def _patch_sim_xml(path: str) -> None:
             '  <actuator>',
             *[
                 f'    <position name="{j}_act" joint="{j}" kp="280" kv="12" '
-                f'ctrlrange="{lo} {hi}" forcelimited="true" forcerange="-200 200"/>'
+                f'ctrlrange="{lo} {hi}" forcelimited="true" forcerange="-100 100"/>'
                 for j, lo_hi in joints
                 if "_joint" in j
                 for lo, hi in [lo_hi.split()]
@@ -191,7 +207,7 @@ def _patch_foot_contact(xml: str) -> str:
         foot_geom = (
             f'            <geom name="leg{leg}_foot_pad" type="box" pos="{pos}" '
             f'quat="{quat}" size="{size}" rgba="0.75 0.78 0.82 0.35" '
-            f'friction="1.5 0.005 0.0001" solref="0.02 1" condim="3"/>\n'
+            f'friction={_friction_attr(FOOT_FRICTION)} solref="0.004 1.2" condim="3"/>\n'
         )
         pat = (
             rf'(<body name="leg{leg}_tibia"[^>]*>\s*'

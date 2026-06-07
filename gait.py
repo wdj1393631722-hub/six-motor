@@ -21,6 +21,7 @@ except ImportError:
 
 from leg_ik import HexapodIK
 from joint_tripod_gait import JointTripodCrawlPlanner
+from robot_limits import clamp_joint_targets
 from tripod_planner import (
     TRIPOD_A,
     TRIPOD_B,
@@ -44,8 +45,8 @@ class GaitParams:
     use_radial_stride: bool = True
 
 
-CRAWL_NOMINAL_SPEED_MPS = 0.02
-SLOT_NOMINAL_SPEED_MPS = 0.02
+CRAWL_NOMINAL_SPEED_MPS = 0.04
+SLOT_NOMINAL_SPEED_MPS = 0.04
 
 
 def forward_gait_params(speed_mps: float = CRAWL_NOMINAL_SPEED_MPS) -> GaitParams:
@@ -71,6 +72,14 @@ def nominal_stand_pose() -> Dict[str, float]:
         loaded = load_stand_pose()
         if loaded is not None:
             return loaded[0]
+    try:
+        from rl_posture import load_sim_stand_pose
+
+        lifted = load_sim_stand_pose()
+        if lifted is not None:
+            return lifted[0]
+    except ImportError:
+        pass
     pose = {}
     defaults = {
         1: (0.275, 0.014, 0.0),
@@ -88,16 +97,24 @@ def nominal_stand_pose() -> Dict[str, float]:
 
 
 def default_body_height() -> float:
+    if load_stand_pose is not None:
+        loaded = load_stand_pose()
+        if loaded is not None:
+            return loaded[1]
+    try:
+        from rl_posture import load_sim_stand_pose
+
+        lifted = load_sim_stand_pose()
+        if lifted is not None:
+            return lifted[1]
+    except ImportError:
+        pass
     try:
         from foot_kinematics import LOCOMOTION_BODY_HEIGHT
 
         return LOCOMOTION_BODY_HEIGHT
     except ImportError:
         pass
-    if load_stand_pose is not None:
-        loaded = load_stand_pose()
-        if loaded is not None:
-            return loaded[1]
     return 0.14
 
 
@@ -137,14 +154,18 @@ class TripodGait:
             self._init_kinematics()
 
     def _init_kinematics(self) -> None:
-        if apply_flat_feet is not None:
-            import mujoco
-            from foot_kinematics import load_foot_frames
+        import mujoco
+        from foot_kinematics import load_foot_frames
 
-            self._flat_data = mujoco.MjData(self._model)
-            self._flat_frames = load_foot_frames(
-                self._model, self.stand, self.p.body_height
-            )
+        self._flat_data = mujoco.MjData(self._model)
+        self._flat_frames = load_foot_frames(
+            self._model, self.stand, self.p.body_height
+        )
+        # 手动标定 stand_pose_flat.json 时保持 JSON 角度，不再改 tibia
+        has_file_stand = (
+            load_stand_pose is not None and load_stand_pose() is not None
+        )
+        if apply_flat_feet is not None and not has_file_stand:
             self.stand = apply_flat_feet(
                 self._model,
                 self._flat_data,
@@ -230,6 +251,8 @@ class TripodGait:
             self.last_stance_lock = {}
             self.last_kinematic_only = False
             self.last_body_y = 0.0
+            if self._model is not None:
+                return clamp_joint_targets(self._model, dict(self.stand))
             return dict(self.stand)
 
         # 关节空间三角步态：抬腿→coxa 前摆→六腿蹬进（大振幅）
@@ -240,7 +263,7 @@ class TripodGait:
             and abs(vy) <= self.p.cmd_deadband
             and abs(vx) > self.p.cmd_deadband
         ):
-            scale = min(speed / CRAWL_NOMINAL_SPEED_MPS, 1.0)
+            scale = min(speed / CRAWL_NOMINAL_SPEED_MPS, 2.2)
             direction = 1.0 if vx >= 0 else -1.0
             self.last_body_x = 0.0
             physics = self.use_physics_gait
@@ -270,6 +293,8 @@ class TripodGait:
             else:
                 self.last_body_y = getattr(self._joint_crawl, "last_body_y", 0.0)
                 self.last_stance_lock = {}
+            if self._model is not None:
+                return clamp_joint_targets(self._model, joints)
             return joints
 
         # 槽位三角步态（备用）
@@ -286,8 +311,12 @@ class TripodGait:
             self.last_stance_lock = dict(out.stance_world_lock)
             self.last_kinematic_only = out.kinematic_only
             if out.phase_name.endswith("BODY_ADVANCE"):
-                return out.joints
-            return self._enforce_flat_feet(out.joints)
+                joints = out.joints
+            else:
+                joints = self._enforce_flat_feet(out.joints)
+            if self._model is not None:
+                return clamp_joint_targets(self._model, joints)
+            return joints
 
         if self._planner is None or self._ik is None:
             return self._step_fallback(dt, vx, vy, omega)
@@ -307,7 +336,10 @@ class TripodGait:
             targets[f"leg{leg}_femur_joint"] = f
             targets[f"leg{leg}_tibia_joint"] = t
 
-        return self._enforce_flat_feet(targets)
+        targets = self._enforce_flat_feet(targets)
+        if self._model is not None:
+            return clamp_joint_targets(self._model, targets)
+        return targets
 
     def _step_fallback(
         self,

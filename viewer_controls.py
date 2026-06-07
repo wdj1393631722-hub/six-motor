@@ -28,6 +28,8 @@ CONTROL_HELP = """
   J 或 ←   左转
   L 或 →   右转
   P        停止
+  Z / X    使能站立时 关节撑起/降低 ±1mm（改 femur/tibia，足底仍贴地）
+  S        使能站立时 保存关节角+高度到 stand_pose_flat.json
   B        重置为失能趴地
 鼠标仍用于旋转/平移视角（MuJoCo 默认）。
 """
