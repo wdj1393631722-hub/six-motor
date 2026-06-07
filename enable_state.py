@@ -209,15 +209,33 @@ class EnableController:
         return dict(self.stand_pose)
 
 
+STAND_KP = 280.0
+STAND_KV = 12.0
+LOCOMOTION_KP = 130.0
+LOCOMOTION_KV = 30.0
+
+
+def set_actuator_gains(
+    model: mujoco.MjModel,
+    kp: float,
+    kv: float,
+) -> None:
+    model.actuator_gainprm[:, 0] = kp
+    model.actuator_biasprm[:, 1] = -kp
+    model.actuator_biasprm[:, 2] = -kv
+
+
 def set_actuator_torque_enabled(
     model: mujoco.MjModel,
     enabled: bool,
-    kp_nominal: float = 280.0,
+    kp_nominal: float = STAND_KP,
+    kv_nominal: float = STAND_KV,
 ) -> None:
     """仿真 MIT 使能/失能：失能时 kp=0 无力矩。"""
-    kp = kp_nominal if enabled else 0.0
-    model.actuator_gainprm[:, 0] = kp
-    model.actuator_biasprm[:, 1] = -kp
+    if enabled:
+        set_actuator_gains(model, kp_nominal, kv_nominal)
+    else:
+        set_actuator_gains(model, 0.0, 0.0)
 
 
 def make_prone_pose_analytic(stand_pose: Dict[str, float]) -> Dict[str, float]:

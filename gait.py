@@ -20,6 +20,7 @@ except ImportError:
     load_stand_pose = None
 
 from leg_ik import HexapodIK
+from joint_tripod_gait import JointTripodCrawlPlanner
 from tripod_planner import (
     TRIPOD_A,
     TRIPOD_B,
@@ -121,11 +122,16 @@ class TripodGait:
         self._flat_data = None
         self._last_joints: Dict[int, tuple] = {}
         self._slot = None
-        self.use_slot_gait = True
+        self._joint_crawl: Optional[JointTripodCrawlPlanner] = None
+        self.use_slot_gait = False
+        self.use_joint_gait = True
+        self.use_physics_gait = True
+        self._joint_stance = None
         self.last_phase = ""
         self.last_body_x = 0.0
         self.last_stance_lock: Dict[int, object] = {}
         self.last_kinematic_only = False
+        self.last_body_y = 0.0
 
         if model is not None:
             self._init_kinematics()
@@ -158,7 +164,14 @@ class TripodGait:
         )
         self._planner = TripodFootPlanner(nominal, cfg)
         self._last_joints = {leg: self._ik.stand[leg].joints for leg in range(1, 7)}
-        if self.use_slot_gait:
+        if self.use_joint_gait:
+            self._joint_crawl = JointTripodCrawlPlanner(self.stand)
+            self.p.cycle_time = self._joint_crawl.cycle_time
+            if self.use_physics_gait:
+                from foot_stance_lock import JointGaitStanceTracker
+
+                self._joint_stance = JointGaitStanceTracker()
+        elif self.use_slot_gait:
             from tripod_slot_gait import SlotGaitConfig, TripodSlotGait
 
             cfg = SlotGaitConfig(step_length=self.p.stride_length, step_height=self.p.step_height)
@@ -173,8 +186,21 @@ class TripodGait:
         self.last_stance_lock = {}
         self.last_body_x = 0.0
         self.last_kinematic_only = False
-        if self._slot is not None:
+        self.last_body_y = 0.0
+        if self._joint_crawl is not None:
+            self._joint_crawl.reset()
+            self._joint_crawl.stand = dict(self.stand)
+        if self._joint_stance is not None:
+            self._joint_stance.reset()
+        elif self._slot is not None:
             self._slot.reset()
+        elif self.use_joint_gait:
+            self._joint_crawl = JointTripodCrawlPlanner(self.stand)
+            self.p.cycle_time = self._joint_crawl.cycle_time
+            if self.use_physics_gait:
+                from foot_stance_lock import JointGaitStanceTracker
+
+                self._joint_stance = JointGaitStanceTracker()
         elif self._ik is not None and self.use_slot_gait:
             from tripod_slot_gait import SlotGaitConfig, TripodSlotGait
 
@@ -193,7 +219,7 @@ class TripodGait:
         sim_data=None,
     ) -> Dict[str, float]:
         """
-        vx: 前进 (m/s)，机体 +X
+        vx: 前进 (m/s)，沿 base_link +Y（1/6 前方）
         vy: 侧向 (m/s)
         omega: 绕 Z 角速度 (rad/s)，正=左转
         """
@@ -203,9 +229,50 @@ class TripodGait:
         if not moving:
             self.last_stance_lock = {}
             self.last_kinematic_only = False
+            self.last_body_y = 0.0
             return dict(self.stand)
 
-        # 槽位三角步态：抬腿→前移→落地→机身前进→回中/后置
+        # 关节空间三角步态：抬腿→coxa 前摆→六腿蹬进（大振幅）
+        if (
+            self.use_joint_gait
+            and self._joint_crawl is not None
+            and abs(omega) <= self.p.cmd_deadband
+            and abs(vy) <= self.p.cmd_deadband
+            and abs(vx) > self.p.cmd_deadband
+        ):
+            scale = min(speed / CRAWL_NOMINAL_SPEED_MPS, 1.0)
+            direction = 1.0 if vx >= 0 else -1.0
+            self.last_body_x = 0.0
+            physics = self.use_physics_gait
+            self.last_kinematic_only = not physics
+            joints = self._joint_crawl.step(
+                dt, speed_scale=scale, direction=direction, physics=physics
+            )
+            phase = self._joint_crawl.current_phase()
+            self.last_phase = phase.name
+            if physics:
+                self.last_body_y = 0.0
+                if (
+                    sim_data is not None
+                    and self._ik is not None
+                    and self._joint_stance is not None
+                ):
+                    self.last_stance_lock = self._joint_stance.update(
+                        phase.name,
+                        phase.kind,
+                        phase.group,
+                        self._model,
+                        sim_data,
+                        self._ik,
+                    )
+                else:
+                    self.last_stance_lock = {}
+            else:
+                self.last_body_y = getattr(self._joint_crawl, "last_body_y", 0.0)
+                self.last_stance_lock = {}
+            return joints
+
+        # 槽位三角步态（备用）
         if (
             self.use_slot_gait
             and self._slot is not None
@@ -218,7 +285,6 @@ class TripodGait:
             self.last_body_x = out.body_x
             self.last_stance_lock = dict(out.stance_world_lock)
             self.last_kinematic_only = out.kinematic_only
-            # 机身推进相优先保证足端世界锚定，不再改 tibia
             if out.phase_name.endswith("BODY_ADVANCE"):
                 return out.joints
             return self._enforce_flat_feet(out.joints)

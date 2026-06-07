@@ -90,6 +90,8 @@ class TripodSlotGait:
         self._phase_t = 0.0
         self._anchors_world: Dict[int, np.ndarray] = {}
         self._body_adv_start_x = 0.0
+        self._body_adv_armed = False
+        self._swing_stance_armed = False
         self._half = 0  # 0=A swing, 1=B swing
         self._last_joints = {
             leg: self.ik.stand[leg].joints for leg in range(1, 7)
@@ -119,6 +121,8 @@ class TripodSlotGait:
         self._phase_t = 0.0
         self._anchors_world.clear()
         self._body_adv_start_x = 0.0
+        self._body_adv_armed = False
+        self._swing_stance_armed = False
         self._half = 0
         self._last_joints = {
             leg: self.ik.stand[leg].joints for leg in range(1, 7)
@@ -180,8 +184,9 @@ class TripodSlotGait:
         kinematic_only = True
 
         if step.kind == PhaseKind.SWING_LIFT:
-            if u < 0.02:
+            if not self._swing_stance_armed:
                 self._capture_anchors_world(stance, sim_data)
+                self._swing_stance_armed = True
             for leg in swing:
                 c = self._slot_center(leg)
                 swing_t[leg] = self._foot_target_base(leg, c, h * su)
@@ -207,15 +212,13 @@ class TripodSlotGait:
                     lock[leg] = self._anchors_world[leg].copy()
 
         elif step.kind == PhaseKind.BODY_ADVANCE:
-            if u < 0.02:
+            if not self._body_adv_armed or len(self._anchors_world) < 6:
                 self._body_adv_start_x = self.body_x
                 self._capture_anchors_world(tuple(range(1, 7)), sim_data)
+                self._body_adv_armed = True
             body_x = self._body_adv_start_x + self.cfg.step_length * su
             for leg in range(1, 7):
-                if leg in self._anchors_world:
-                    lock[leg] = self._anchors_world[leg].copy()
-            # 六足均锚定，由 IK 在新机位下求解
-            for leg in range(1, 7):
+                lock[leg] = self._anchors_world[leg].copy()
                 swing_t[leg] = self._world_to_base_at(body_x, lock[leg])
 
         elif step.kind == PhaseKind.REPOSITION:
@@ -268,6 +271,9 @@ class TripodSlotGait:
             step = self._steps[self._phase_idx]
             if step.kind == PhaseKind.SWING_LIFT:
                 self._anchors_world.clear()
+                self._swing_stance_armed = False
+            elif step.kind == PhaseKind.BODY_ADVANCE:
+                self._body_adv_armed = False
 
         u = self._phase_t / max(step.duration_s, 1e-9)
         swing_t, lock, body_x, kinematic_only = self._phase_foot_targets(

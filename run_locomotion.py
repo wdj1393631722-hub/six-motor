@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SIX-MOTOR 六足 MuJoCo 仿真 — 槽位三角步态（中/前/后 + 机身推进）
+SIX-MOTOR 六足 MuJoCo 仿真 — 关节三角步态（抬腿/前摆/蹬进）
 
 按键（viewer 窗口激活时）:
   E        使能（4s 撑起 → 0.6s 软站立）
@@ -22,10 +22,26 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(SCRIPT_DIR, "generated", "SIX-MOTOR_sim.xml")
 
 sys.path.insert(0, SCRIPT_DIR)
-from enable_state import EnableController, EnablePhase, make_prone_pose_analytic
+from ctrl_smoother import CtrlSmoother
+from enable_state import (
+    EnableController,
+    EnablePhase,
+    LOCOMOTION_KP,
+    LOCOMOTION_KV,
+    STAND_KP,
+    STAND_KV,
+    make_prone_pose_analytic,
+    set_actuator_gains,
+)
 from gait import create_forward_tripod_gait
 from tripod_planner import TRIPOD_A, TRIPOD_B
-from foot_stance_lock import apply_stance_world_lock, build_actuator_map
+from body_stabilizer import stabilize_locomotion_body
+from foot_stance_lock import (
+    apply_stance_world_lock,
+    blend_stance_ctrl_targets,
+    build_actuator_map,
+    damp_leg_joint_velocities,
+)
 from viewer_controls import CONTROL_HELP, VelocityCommand, make_key_handler
 
 try:
@@ -128,16 +144,22 @@ def main():
     data = mujoco.MjData(model)
     max_v = 0.02
     gait = create_forward_tripod_gait(model=model, speed_mps=max_v)
-    gait.use_slot_gait = True
+    gait.use_joint_gait = True
+    gait.use_slot_gait = False
     enable_ctrl = EnableController()
     reset_disabled(model, data, gait, enable_ctrl)
     act_map = build_actuator_map(model)
+    ctrl_smoother = CtrlSmoother(tau=0.14)
+    locomotion_gains = False
 
     cmd = VelocityCommand()
     max_turn = 0.4
 
     def on_reset():
+        nonlocal locomotion_gains
         gait.reset()
+        ctrl_smoother.reset(gait.stand)
+        locomotion_gains = False
         reset_disabled(model, data, gait, enable_ctrl)
 
     def on_enable():
@@ -158,6 +180,7 @@ def main():
     print("加载:", MODEL_PATH)
     print("关节数:", model.njnt, "执行器:", model.nu)
     print("三角步态分组: A", TRIPOD_A, "| B", TRIPOD_B)
+    mode = "物理+摩擦" if getattr(gait, "use_physics_gait", True) else "运动学"
     print(
         "  周期",
         round(gait.p.cycle_time, 1),
@@ -165,7 +188,8 @@ def main():
         gait.p.stride_length,
         "m | 抬脚",
         gait.p.step_height,
-        "m | 槽位步态",
+        "m | 关节步态 |",
+        mode,
     )
     print(CONTROL_HELP)
     print("提示: 请先点击 MuJoCo 窗口；按 E 使能后再用 I/K/J/L 行走。")
@@ -186,6 +210,7 @@ def main():
                 last = now
                 if dt <= 0:
                     dt = model.opt.timestep
+                dt = min(dt, 0.04)
 
                 enable_targets = enable_ctrl.step(model, data, dt)
 
@@ -200,8 +225,38 @@ def main():
                 else:
                     targets = None
 
+                walking = enable_ctrl.allows_gait and (
+                    abs(cmd.vx) > 1e-6
+                    or abs(cmd.vy) > 1e-6
+                    or abs(cmd.omega) > 1e-6
+                )
+                if walking and gait.use_joint_gait and gait.use_physics_gait:
+                    if not locomotion_gains:
+                        set_actuator_gains(model, LOCOMOTION_KP, LOCOMOTION_KV)
+                        locomotion_gains = True
+                elif locomotion_gains and enable_ctrl.phase == EnablePhase.ENABLED:
+                    set_actuator_gains(model, STAND_KP, STAND_KV)
+                    locomotion_gains = False
+
                 if targets is not None:
-                    apply_ctrl(model, data, targets)
+                    ctrl_targets = targets
+                    if (
+                        walking
+                        and gait.use_joint_gait
+                        and gait.use_physics_gait
+                        and gait.last_stance_lock
+                        and gait._ik is not None
+                    ):
+                        ctrl_targets = blend_stance_ctrl_targets(
+                            model,
+                            data,
+                            gait._ik,
+                            gait.last_stance_lock,
+                            targets,
+                        )
+                    if walking and gait.use_joint_gait and gait.use_physics_gait:
+                        ctrl_targets = ctrl_smoother.filter(ctrl_targets, dt)
+                    apply_ctrl(model, data, ctrl_targets)
 
                 if enable_ctrl.phase == EnablePhase.DISABLED:
                     body_z = getattr(enable_ctrl, "prone_body_z", MIN_BODY_HEIGHT)
@@ -209,21 +264,35 @@ def main():
                         model, data, enable_ctrl.prone_pose, body_z
                     )
                 else:
-                    walking = enable_ctrl.allows_gait and (
-                        abs(cmd.vx) > 1e-6
-                        or abs(cmd.vy) > 1e-6
-                        or abs(cmd.omega) > 1e-6
-                    )
-                    if walking and gait.use_slot_gait and targets is not None:
+                    if (
+                        walking
+                        and gait.use_joint_gait
+                        and targets is not None
+                        and gait.last_kinematic_only
+                    ):
+                        data.qpos[1] = getattr(gait, "last_body_y", 0.0)
+                        apply_joint_qpos(model, data, targets)
+                    elif (
+                        walking
+                        and gait.use_slot_gait
+                        and targets is not None
+                    ):
                         apply_joint_qpos(
                             model, data, targets, body_x=gait.last_body_x
                         )
                     else:
-                        if walking:
+                        if walking and not gait.use_joint_gait:
                             data.qpos[0] = gait.last_body_x
                         for _ in range(max(1, int(dt / model.opt.timestep))):
                             mujoco.mj_step(model, data)
-                        if (
+                        if walking and gait.use_joint_gait and gait.use_physics_gait:
+                            stabilize_locomotion_body(
+                                model,
+                                data,
+                                body_z_target=gait.p.body_height,
+                            )
+                            damp_leg_joint_velocities(model, data)
+                        elif (
                             walking
                             and gait.last_stance_lock
                             and gait._ik is not None
@@ -238,9 +307,12 @@ def main():
 
                 if gait.last_phase and gait.last_phase != last_phase:
                     last_phase = gait.last_phase
-                    print(
-                        f"步态相: {last_phase} | body_x={gait.last_body_x:.4f} m"
-                    )
+                    if gait.use_joint_gait:
+                        print(f"步态相: {last_phase}")
+                    else:
+                        print(
+                            f"步态相: {last_phase} | body_x={gait.last_body_x:.4f} m"
+                        )
 
                 viewer.sync()
     except TypeError:
@@ -259,15 +331,32 @@ def main():
                 targets = None
             if targets is not None:
                 apply_ctrl(model, data, targets)
-            if enable_ctrl.allows_gait and gait.use_slot_gait and targets:
+            if (
+                enable_ctrl.allows_gait
+                and gait.use_joint_gait
+                and targets
+                and gait.last_kinematic_only
+            ):
+                data.qpos[1] = getattr(gait, "last_body_y", 0.0)
+                apply_joint_qpos(model, data, targets)
+            elif enable_ctrl.allows_gait and gait.use_slot_gait and targets:
                 apply_joint_qpos(model, data, targets, body_x=gait.last_body_x)
             else:
-                if enable_ctrl.allows_gait:
+                if enable_ctrl.allows_gait and not gait.use_joint_gait:
                     data.qpos[0] = gait.last_body_x
                 mujoco.mj_step(model, data)
+                if enable_ctrl.allows_gait and gait.use_joint_gait and gait.use_physics_gait:
+                    stabilize_locomotion_body(
+                        model, data, body_z_target=gait.p.body_height
+                    )
                 if enable_ctrl.allows_gait and gait.last_stance_lock and gait._ik:
                     apply_stance_world_lock(
-                        model, data, gait._ik, gait.last_stance_lock, act_map
+                        model,
+                        data,
+                        gait._ik,
+                        gait.last_stance_lock,
+                        act_map,
+                        blend=0.35,
                     )
         mujoco.viewer.launch(model, data)
 

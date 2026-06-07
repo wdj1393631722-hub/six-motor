@@ -77,8 +77,8 @@ def main() -> None:
         "model": MODEL_PATH,
         "coordinate_frame": {
             "base": "base_link",
-            "x": "forward",
-            "y": "left",
+            "x": "left_right",
+            "y": "forward",
             "z": "up",
             "units": "SI (m, rad, kg)",
         },
