@@ -1,0 +1,1055 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="SIX-MOTOR-NEW">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-3.52451312031488E-05 0.00157678359100989 -0.0174624705399826"
+        rpy="0 0 0" />
+      <mass
+        value="6.64113683096839" />
+      <inertia
+        ixx="0.0242101767916739"
+        ixy="1.97163482681476E-05"
+        ixz="3.79687997000876E-06"
+        iyy="0.0227670806613899"
+        iyz="-3.03263440435378E-06"
+        izz="0.0462560362122235" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="leg6_coxa">
+    <inertial>
+      <origin
+        xyz="0.000746691010929126 -5.70005934101558E-05 0.0740807128474748"
+        rpy="0 0 0" />
+      <mass
+        value="1.74343216499534" />
+      <inertia
+        ixx="0.00305442298849893"
+        ixy="0.00063864198676477"
+        ixz="-1.08887902358625E-05"
+        iyy="0.00212682090336854"
+        iyz="1.54603300393265E-05"
+        izz="0.0018910796652774" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg6_coxa.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg6_coxa.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg6_coxa_joint"
+    type="revolute">
+    <origin
+      xyz="-0.1 0.16209 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="leg6_coxa" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-0.8" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg6_femur">
+    <inertial>
+      <origin
+        xyz="-0.0315005954287896 0.167930718831041 -0.0092586784236991"
+        rpy="0 0 0" />
+      <mass
+        value="1.35001347691276" />
+      <inertia
+        ixx="0.00349601202355531"
+        ixy="0.00135347434197532"
+        ixz="-6.63723265225406E-05"
+        iyy="0.00153327395441697"
+        iyz="0.000130520451682588"
+        izz="0.00346739155457926" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg6_femur.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg6_femur.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg6_femur_joint"
+    type="revolute">
+    <origin
+      xyz="-0.037417 -0.019077 0.0775"
+      rpy="0 0 0" />
+    <parent
+      link="leg6_coxa" />
+    <child
+      link="leg6_femur" />
+    <axis
+      xyz="-0.89089 -0.45422 0" />
+    <limit lower="-1.4" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg6_tibia">
+    <inertial>
+      <origin
+        xyz="-0.0711902447855713 0.0379258116637037 -0.103035320510628"
+        rpy="0 0 0" />
+      <mass
+        value="0.369769294246777" />
+      <inertia
+        ixx="0.00243946370450715"
+        ixy="0.000114940924686405"
+        ixz="-0.000280759264611977"
+        iyy="0.00226730374177713"
+        iyz="0.000547538391201372"
+        izz="0.00069630855641242" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg6_tibia.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg6_tibia.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg6_tibia_joint"
+    type="revolute">
+    <origin
+      xyz="-0.014526 0.21672 -0.011406"
+      rpy="0 0 0" />
+    <parent
+      link="leg6_femur" />
+    <child
+      link="leg6_tibia" />
+    <axis
+      xyz="-0.89089 -0.45422 0" />
+    <limit lower="0.0" upper="2.2"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg5_coxa">
+    <inertial>
+      <origin
+        xyz="0.00036823109134157 0.000664471552775527 0.075136022573639"
+        rpy="0 0 0" />
+      <mass
+        value="1.71860569566433" />
+      <inertia
+        ixx="0.0018000189863828"
+        ixy="-6.51393998719985E-05"
+        ixz="-1.8581009662141E-05"
+        iyy="0.00337323183478244"
+        iyz="-3.45064219560361E-06"
+        izz="0.0018832102881799" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg5_coxa.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg5_coxa.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg5_coxa_joint"
+    type="revolute">
+    <origin
+      xyz="-0.16 0.002094 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="leg5_coxa" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-0.8" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg5_femur">
+    <inertial>
+      <origin
+        xyz="-0.166034803555492 0.0413661801528756 8.91239939283667E-05"
+        rpy="0 0 0" />
+      <mass
+        value="1.35001166143333" />
+      <inertia
+        ixx="0.000840502351620165"
+        ixy="-0.000139569543515879"
+        ixz="3.70434918758897E-06"
+        iyy="0.00418063504532648"
+        iyz="3.5033475831879E-07"
+        izz="0.00347553036433571" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg5_femur.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg5_femur.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg5_femur_joint"
+    type="revolute">
+    <origin
+      xyz="0.0017414 -0.041964 0.0775"
+      rpy="0 0 0" />
+    <parent
+      link="leg5_coxa" />
+    <child
+      link="leg5_femur" />
+    <axis
+      xyz="0.041461 -0.99914 0" />
+    <limit lower="-1.4" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg5_tibia">
+    <inertial>
+      <origin
+        xyz="-0.0581763778173067 -0.0486496020366714 -0.10663686412299"
+        rpy="0 0 0" />
+      <mass
+        value="0.369769294246776" />
+      <inertia
+        ixx="0.00227511124675976"
+        ixy="-6.97417840033389E-06"
+        ixz="-0.000524690450740944"
+        iyy="0.00249677154237912"
+        iyz="-2.30690358279991E-05"
+        izz="0.000631193213557811" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg5_tibia.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg5_tibia.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg5_tibia_joint"
+    type="revolute">
+    <origin
+      xyz="-0.20337 0.077134 -1.8623E-05"
+      rpy="0 0 0" />
+    <parent
+      link="leg5_femur" />
+    <child
+      link="leg5_tibia" />
+    <axis
+      xyz="0.041461 -0.99914 0" />
+    <limit lower="0.0" upper="2.2"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg1_coxa">
+    <inertial>
+      <origin
+        xyz="0.000186804773758861 -0.000736327405738368 0.0766361886114239"
+        rpy="0 0 0" />
+      <mass
+        value="1.71860937866405" />
+      <inertia
+        ixx="0.0026031741361951"
+        ixy="-0.000789117579080406"
+        ixz="1.11861697795885E-05"
+        iyy="0.00257010882553967"
+        iyz="1.52551256899632E-05"
+        izz="0.00188319397547121" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg1_coxa.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg1_coxa.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg1_coxa_joint"
+    type="revolute">
+    <origin
+      xyz="0.1 0.16209 -0.0015"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="leg1_coxa" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-0.8" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg1_femur">
+    <inertial>
+      <origin
+        xyz="0.148563109797246 0.0828342209456968 -0.0186073133582465"
+        rpy="0 0 0" />
+      <mass
+        value="1.35001361621293" />
+      <inertia
+        ixx="0.00256330117502654"
+        ixy="-0.00165879429582973"
+        ixz="0.000206556411823347"
+        iyy="0.00249125178427493"
+        iyz="0.000210835119914927"
+        izz="0.0034421248844142" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg1_femur.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg1_femur.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg1_femur_joint"
+    type="revolute">
+    <origin
+      xyz="-0.0300126115355321 0.029380999792683 0.079"
+      rpy="0 0 0" />
+    <parent
+      link="leg1_coxa" />
+    <child
+      link="leg1_femur" />
+    <axis
+      xyz="-0.714585988941188 0.699547614111395 0" />
+    <limit lower="-1.4" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg1_tibia">
+    <inertial>
+      <origin
+        xyz="0.00666667800030105 0.072846530058562 -0.108497160693959"
+        rpy="0 0 0" />
+      <mass
+        value="0.369769294246779" />
+      <inertia
+        ixx="0.00240156867035889"
+        ixy="-9.5178181034401E-05"
+        ixz="0.000329200130734746"
+        iyy="0.00240206521558633"
+        iyz="0.000338025528626546"
+        izz="0.000599442116751499" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg1_tibia.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg1_tibia.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg1_tibia_joint"
+    type="revolute">
+    <origin
+      xyz="0.200095017491537 0.082174672312189 -0.0227937975213954"
+      rpy="0 0 0" />
+    <parent
+      link="leg1_femur" />
+    <child
+      link="leg1_tibia" />
+    <axis
+      xyz="-0.714585988941181 0.699547614111402 0" />
+    <limit lower="0.0" upper="2.2"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg3_coxa">
+    <inertial>
+      <origin
+        xyz="-0.0010005151156629 0.000217347771842652 0.0751941049367529"
+        rpy="0 0 0" />
+      <mass
+        value="1.72943924961127" />
+      <inertia
+        ixx="0.00272228274700437"
+        ixy="0.000777474095950065"
+        ixz="1.4101668310407E-05"
+        iyy="0.00245157537826762"
+        iyz="-1.26026239275406E-05"
+        izz="0.0018835937053191" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg3_coxa.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg3_coxa.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg3_coxa_joint"
+    type="revolute">
+    <origin
+      xyz="0.1 -0.15791 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="leg3_coxa" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-0.8" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg3_femur">
+    <inertial>
+      <origin
+        xyz="0.0682399346152523 -0.156017948463608 -0.016746613233269"
+        rpy="0 0 0" />
+      <mass
+        value="1.35001362963475" />
+      <inertia
+        ixx="0.00280795009174223"
+        ixy="0.00163796623570263"
+        ixz="0.000170973078861688"
+        iyy="0.00224020850553295"
+        iyz="-0.000203432971623713"
+        izz="0.00344851928929235" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg3_femur.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg3_femur.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg3_femur_joint"
+    type="revolute">
+    <origin
+      xyz="0.0321402829617821 0.0270370525601762 0.0774999999999774"
+      rpy="0 0 0" />
+    <parent
+      link="leg3_coxa" />
+    <child
+      link="leg3_femur" />
+    <axis
+      xyz="0.765244832421804 0.643739346670471 0" />
+    <limit lower="-1.4" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg3_tibia">
+    <inertial>
+      <origin
+        xyz="0.0567566618061565 0.00429204688068069 -0.117825952531708"
+        rpy="0 0 0" />
+      <mass
+        value="0.369769294246777" />
+      <inertia
+        ixx="0.0024692911840684"
+        ixy="3.53760947630417E-05"
+        ixz="5.80452678230441E-05"
+        iyy="0.00245197295156868"
+        iyz="-6.78658440827425E-05"
+        izz="0.000481811867059599" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg3_tibia.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg3_tibia.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg3_tibia_joint"
+    type="revolute">
+    <origin
+      xyz="0.0626395126530096 -0.207280421887983 -0.0205272539966573"
+      rpy="0 0 0" />
+    <parent
+      link="leg3_femur" />
+    <child
+      link="leg3_tibia" />
+    <axis
+      xyz="0.765244832421804 0.643739346670471 0" />
+    <limit lower="0.0" upper="2.2"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg4_coxa">
+    <inertial>
+      <origin
+        xyz="0.000231519315582088 0.000994040039009353 0.0752236761960551"
+        rpy="0 0 0" />
+      <mass
+        value="1.72943885704362" />
+      <inertia
+        ixx="0.00242464546860833"
+        ixy="-0.000772301805520783"
+        ixz="-1.28461758141085E-05"
+        iyy="0.00274921476648414"
+        iyz="-1.3880919503438E-05"
+        izz="0.00188359344985057" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg4_coxa.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg4_coxa.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg4_coxa_joint"
+    type="revolute">
+    <origin
+      xyz="-0.1 -0.15791 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="leg4_coxa" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-0.8" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg4_femur">
+    <inertial>
+      <origin
+        xyz="-0.155934054710809 -0.0645071514903061 -0.0283220006772472"
+        rpy="0 0 0" />
+      <mass
+        value="1.35001358830617" />
+      <inertia
+        ixx="0.0022140923119005"
+        ixy="-0.00160225656246408"
+        ixz="-0.000346742256217848"
+        iyy="0.00288486669532441"
+        iyz="-0.000281456955925441"
+        izz="0.00339771837429851" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg4_femur.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg4_femur.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg4_femur_joint"
+    type="revolute">
+    <origin
+      xyz="0.0264745483946228 -0.0326051442622947 0.0775000015201281"
+      rpy="0 0 0" />
+    <parent
+      link="leg4_coxa" />
+    <child
+      link="leg4_femur" />
+    <axis
+      xyz="0.630346256682293 -0.776314109550136 0" />
+    <limit lower="-1.4" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg4_tibia">
+    <inertial>
+      <origin
+        xyz="0.00629494970243299 -0.0543951257698014 -0.118845442977196"
+        rpy="0 0 0" />
+      <mass
+        value="0.369769294246777" />
+      <inertia
+        ixx="0.00245298798307975"
+        ixy="-3.32134701420868E-05"
+        ixz="-1.97316012412597E-05"
+        iyy="0.0024720276808506"
+        iyz="-1.68588443125658E-05"
+        izz="0.000478060338766327" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg4_tibia.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg4_tibia.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg4_tibia_joint"
+    type="revolute">
+    <origin
+      xyz="-0.206812647947726 -0.0577904973212422 -0.0346271146389009"
+      rpy="0 0 0" />
+    <parent
+      link="leg4_femur" />
+    <child
+      link="leg4_tibia" />
+    <axis
+      xyz="0.630346256682321 -0.776314109550114 0" />
+    <limit lower="0.0" upper="2.2"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg2_coxa">
+    <inertial>
+      <origin
+        xyz="-0.000316663052941257 -0.000690529411268148 0.0751360695005822"
+        rpy="0 0 0" />
+      <mass
+        value="1.71860753425496" />
+      <inertia
+        ixx="0.00181898423728756"
+        ixy="-0.000183614735680305"
+        ixz="1.82637137487538E-05"
+        iyy="0.00335427710457275"
+        iyz="4.85300824723469E-06"
+        izz="0.00188321369520285" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg2_coxa.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg2_coxa.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg2_coxa_joint"
+    type="revolute">
+    <origin
+      xyz="0.16 0.002094 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="leg2_coxa" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-0.8" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg2_femur">
+    <inertial>
+      <origin
+        xyz="0.168505934007914 -0.0286496526128392 -0.00798064703836862"
+        rpy="0 0 0" />
+      <mass
+        value="1.35001363058556" />
+      <inertia
+        ixx="0.000886892840734542"
+        ixy="-0.000390400428150987"
+        ixz="0.000125100284758132"
+        iyy="0.00414026951336873"
+        iyz="1.46121587967247E-05"
+        izz="0.00346951399943897" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg2_femur.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg2_femur.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg2_femur_joint"
+    type="revolute">
+    <origin
+      xyz="-0.0049258 0.04171 0.0775"
+      rpy="0 0 0" />
+    <parent
+      link="leg2_coxa" />
+    <child
+      link="leg2_femur" />
+    <axis
+      xyz="-0.11728 0.9931 0" />
+    <limit lower="-1.4" upper="0.8"
+      effort="100"
+      velocity="10" />
+  </joint>
+  <link
+    name="leg2_tibia">
+    <inertial>
+      <origin
+        xyz="0.000577207484417475 0.0465848960365079 -0.122279228417788"
+        rpy="0 0 0" />
+      <mass
+        value="0.369769294246778" />
+      <inertia
+        ixx="0.00236714951748114"
+        ixy="-1.27554877930856E-05"
+        ixz="-0.000341030451084718"
+        iyy="0.00249576611968069"
+        iyz="-4.01151177177697E-05"
+        izz="0.000540160365534885" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg2_tibia.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes_decimated/leg2_tibia.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg2_tibia_joint"
+    type="revolute">
+    <origin
+      xyz="0.20841 -0.061482 -0.009849"
+      rpy="0 0 0" />
+    <parent
+      link="leg2_femur" />
+    <child
+      link="leg2_tibia" />
+    <axis
+      xyz="-0.11728 0.9931 0" />
+    <limit lower="0.0" upper="2.2"
+      effort="100"
+      velocity="10" />
+  </joint>
+</robot>

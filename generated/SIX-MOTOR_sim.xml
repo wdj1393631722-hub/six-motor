@@ -1,0 +1,171 @@
+<mujoco model="SIX-MOTOR">
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+  <default>
+    <joint damping="3" armature="0.04" frictionloss="0.2"/>
+  </default>
+  <compiler angle="radian" meshdir="/home/dash/hexapod_sim/six_motor/generated/"/>
+
+  <asset>
+    <texture name="tex_ground" type="2d" builtin="checker" mark="edge" markrgb="0.12 0.14 0.18"
+             rgb1="0.38 0.41 0.44" rgb2="0.48 0.51 0.54" width="512" height="512"/>
+    <material name="mat_ground" texture="tex_ground" texrepeat="14 14" reflectance="0.08"/>
+
+    <mesh name="base_link" content_type="model/stl" file="meshes_decimated/base_link.STL"/>
+    <mesh name="leg6_coxa" content_type="model/stl" file="meshes_decimated/leg6_coxa.STL"/>
+    <mesh name="leg6_femur" content_type="model/stl" file="meshes_decimated/leg6_femur.STL"/>
+    <mesh name="leg6_tibia" content_type="model/stl" file="meshes_decimated/leg6_tibia.STL"/>
+    <mesh name="leg5_coxa" content_type="model/stl" file="meshes_decimated/leg5_coxa.STL"/>
+    <mesh name="leg5_femur" content_type="model/stl" file="meshes_decimated/leg5_femur.STL"/>
+    <mesh name="leg5_tibia" content_type="model/stl" file="meshes_decimated/leg5_tibia.STL"/>
+    <mesh name="leg1_coxa" content_type="model/stl" file="meshes_decimated/leg1_coxa.STL"/>
+    <mesh name="leg1_femur" content_type="model/stl" file="meshes_decimated/leg1_femur.STL"/>
+    <mesh name="leg1_tibia" content_type="model/stl" file="meshes_decimated/leg1_tibia.STL"/>
+    <mesh name="leg3_coxa" content_type="model/stl" file="meshes_decimated/leg3_coxa.STL"/>
+    <mesh name="leg3_femur" content_type="model/stl" file="meshes_decimated/leg3_femur.STL"/>
+    <mesh name="leg3_tibia" content_type="model/stl" file="meshes_decimated/leg3_tibia.STL"/>
+    <mesh name="leg4_coxa" content_type="model/stl" file="meshes_decimated/leg4_coxa.STL"/>
+    <mesh name="leg4_femur" content_type="model/stl" file="meshes_decimated/leg4_femur.STL"/>
+    <mesh name="leg4_tibia" content_type="model/stl" file="meshes_decimated/leg4_tibia.STL"/>
+    <mesh name="leg2_coxa" content_type="model/stl" file="meshes_decimated/leg2_coxa.STL"/>
+    <mesh name="leg2_femur" content_type="model/stl" file="meshes_decimated/leg2_femur.STL"/>
+    <mesh name="leg2_tibia" content_type="model/stl" file="meshes_decimated/leg2_tibia.STL"/>
+  </asset>
+
+    <visual>
+    <quality shadowsize="2048"/>
+    <map fogstart="4" fogend="18" zfar="25"/>
+  </visual>
+  <worldbody>
+        <light name="sun" pos="0 0 4" dir="0 0 -1" diffuse="0.95 0.95 0.92" castshadow="true"/>
+    <light name="fill" pos="2 2 2.5" dir="-0.6 -0.6 -1" diffuse="0.4 0.42 0.45"/>
+    <geom name="floor" type="plane" size="15 15 0.05" pos="0 0 0" material="mat_ground"
+          friction="1.4 0.005 0.0001" solref="0.02 1" solimp="0.9 0.95 0.001" condim="3"/>
+<body name="base_link">
+      <inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668"/>
+      <joint name="root" type="free"/>
+      <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="base_link"/>
+      <body name="leg6_coxa" pos="-0.1 0.16209 0">
+        <inertial pos="0.000746691 -5.70006e-05 0.0740807" quat="0.752168 0.616221 0.148684 0.180025" mass="1.74343" diaginertia="0.00337991 0.00189482 0.00179759"/>
+        <joint name="leg6_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_coxa"/>
+        <body name="leg6_femur" pos="-0.037417 -0.019077 0.0775">
+          <inertial pos="-0.0315006 0.167931 -0.00925868" quat="0.70634 0.668188 0.160494 0.169854" mass="1.35001" diaginertia="0.00418646 0.00347554 0.00083468"/>
+          <joint name="leg6_femur_joint" pos="0 0 0" axis="-0.89089 -0.45422 0" range="-1.4 0.8" actuatorfrcrange="-100 100"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_femur"/>
+          <body name="leg6_tibia" pos="-0.014526 0.21672 -0.011406">
+            <inertial pos="-0.0711902 0.0379258 -0.103035" quat="0.962245 0.164358 0.0428219 0.212691" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715"/>
+            <joint name="leg6_tibia_joint" pos="0 0 0" axis="-0.89089 -0.45422 0" range="0 2.2" actuatorfrcrange="-100 100"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_tibia"/>
+            <geom name="leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="1.5 0.005 0.0001" solref="0.02 1" condim="3"/>
+
+          </body>
+        </body>
+      </body>
+      <body name="leg5_coxa" pos="-0.16 0.002094 0">
+        <inertial pos="0.000368231 0.000664472 0.075136" quat="0.5376 0.436288 0.455691 0.55945" mass="1.71861" diaginertia="0.00337593 0.0018871 0.00179343"/>
+        <joint name="leg5_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_coxa"/>
+        <body name="leg5_femur" pos="0.0017414 -0.041964 0.0775">
+          <inertial pos="-0.166035 0.0413662 8.9124e-05" quat="0.489055 0.489884 0.510604 0.510021" mass="1.35001" diaginertia="0.00418646 0.00347554 0.000834675"/>
+          <joint name="leg5_femur_joint" pos="0 0 0" axis="0.041461 -0.99914 0" range="-1.4 0.8" actuatorfrcrange="-100 100"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_femur"/>
+          <body name="leg5_tibia" pos="-0.20337 0.077134 -1.8623e-05">
+            <inertial pos="-0.0581764 -0.0486496 -0.106637" quat="0.698208 0.0960905 0.104111 0.701736" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715"/>
+            <joint name="leg5_tibia_joint" pos="0 0 0" axis="0.041461 -0.99914 0" range="0 2.2" actuatorfrcrange="-100 100"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_tibia"/>
+            <geom name="leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="1.5 0.005 0.0001" solref="0.02 1" condim="3"/>
+
+          </body>
+        </body>
+      </body>
+      <body name="leg1_coxa" pos="0.1 0.16209 -0.0015">
+        <inertial pos="0.000186805 -0.000736327 0.0766362" quat="0.71823 0.584273 -0.237691 -0.293724" mass="1.71861" diaginertia="0.00337594 0.0018871 0.00179344"/>
+        <joint name="leg1_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_coxa"/>
+        <body name="leg1_femur" pos="-0.0300126 0.029381 0.079">
+          <inertial pos="0.148563 0.0828342 -0.0186073" quat="0.690617 0.616788 -0.25166 -0.281582" mass="1.35001" diaginertia="0.00418646 0.00347554 0.00083468"/>
+          <joint name="leg1_femur_joint" pos="0 0 0" axis="-0.714586 0.699548 0" range="-1.4 0.8" actuatorfrcrange="-100 100"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_femur"/>
+          <body name="leg1_tibia" pos="0.200095 0.0821747 -0.0227938">
+            <inertial pos="0.00666668 0.0728465 -0.108497" quat="0.391431 -0.0452871 -0.117477 0.911554" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715"/>
+            <joint name="leg1_tibia_joint" pos="0 0 0" axis="-0.714586 0.699548 0" range="0 2.2" actuatorfrcrange="-100 100"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_tibia"/>
+            <geom name="leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="1.5 0.005 0.0001" solref="0.02 1" condim="3"/>
+
+          </body>
+        </body>
+      </body>
+      <body name="leg3_coxa" pos="0.1 -0.15791 0">
+        <inertial pos="-0.00100052 0.000217348 0.0751941" quat="0.592385 0.729219 0.265249 0.216709" mass="1.72944" diaginertia="0.0033761 0.00188749 0.00179385"/>
+        <joint name="leg3_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_coxa"/>
+        <body name="leg3_femur" pos="0.0321403 0.0270371 0.0775">
+          <inertial pos="0.0682399 -0.156018 -0.0167466" quat="0.629826 0.69704 0.254378 0.229668" mass="1.35001" diaginertia="0.00418646 0.00347554 0.00083468"/>
+          <joint name="leg3_femur_joint" pos="0 0 0" axis="0.765245 0.643739 0" range="-1.4 0.8" actuatorfrcrange="-100 100"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_femur"/>
+          <body name="leg3_tibia" pos="0.0626395 -0.20728 -0.0205273">
+            <inertial pos="0.0567567 0.00429205 -0.117826" quat="0.945322 -0.0213306 -0.00838611 0.325332" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715"/>
+            <joint name="leg3_tibia_joint" pos="0 0 0" axis="0.765245 0.643739 0" range="0 2.2" actuatorfrcrange="-100 100"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_tibia"/>
+            <geom name="leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="1.5 0.005 0.0001" solref="0.02 1" condim="3"/>
+
+          </body>
+        </body>
+      </body>
+      <body name="leg4_coxa" pos="-0.1 -0.15791 0">
+        <inertial pos="0.000231519 0.00099404 0.0752237" quat="0.334174 0.270602 0.569783 0.700321" mass="1.72944" diaginertia="0.0033761 0.00188749 0.00179386"/>
+        <joint name="leg4_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_coxa"/>
+        <body name="leg4_femur" pos="0.0264745 -0.0326051 0.0775">
+          <inertial pos="-0.155934 -0.0645072 -0.028322" quat="0.328897 0.276682 0.581049 0.691127" mass="1.35001" diaginertia="0.00418646 0.00347554 0.00083468"/>
+          <joint name="leg4_femur_joint" pos="0 0 0" axis="0.630346 -0.776314 0" range="-1.4 0.8" actuatorfrcrange="-100 100"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_femur"/>
+          <body name="leg4_tibia" pos="-0.206813 -0.0577905 -0.0346271">
+            <inertial pos="0.00629495 -0.0543951 -0.118845" quat="0.446298 0.00261022 0.00611904 0.89486" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715"/>
+            <joint name="leg4_tibia_joint" pos="0 0 0" axis="0.630346 -0.776314 0" range="0 2.2" actuatorfrcrange="-100 100"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_tibia"/>
+            <geom name="leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="1.5 0.005 0.0001" solref="0.02 1" condim="3"/>
+
+          </body>
+        </body>
+      </body>
+      <body name="leg2_coxa" pos="0.16 0.002094 0">
+        <inertial pos="-0.000316663 -0.000690529 0.0751361" quat="0.418646 0.515932 0.579488 0.471957" mass="1.71861" diaginertia="0.00337594 0.00188711 0.00179343"/>
+        <joint name="leg2_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_coxa"/>
+        <body name="leg2_femur" pos="-0.0049258 0.04171 0.0775">
+          <inertial pos="0.168506 -0.0286497 -0.00798065" quat="0.458426 0.48072 0.541094 0.515725" mass="1.35001" diaginertia="0.00418646 0.00347553 0.00083468"/>
+          <joint name="leg2_femur_joint" pos="0 0 0" axis="-0.11728 0.993099 0" range="-1.4 0.8" actuatorfrcrange="-100 100"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_femur"/>
+          <body name="leg2_tibia" pos="0.20841 -0.061482 -0.009849">
+            <inertial pos="0.000577207 0.0465849 -0.122279" quat="0.675139 0.0585549 0.0681138 0.732202" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715"/>
+            <joint name="leg2_tibia_joint" pos="0 0 0" axis="-0.11728 0.993099 0" range="0 2.2" actuatorfrcrange="-100 100"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_tibia"/>
+            <geom name="leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="1.5 0.005 0.0001" solref="0.02 1" condim="3"/>
+
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <position name="leg6_coxa_joint_act" joint="leg6_coxa_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg6_femur_joint_act" joint="leg6_femur_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg6_tibia_joint_act" joint="leg6_tibia_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg5_coxa_joint_act" joint="leg5_coxa_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg5_femur_joint_act" joint="leg5_femur_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg5_tibia_joint_act" joint="leg5_tibia_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg1_coxa_joint_act" joint="leg1_coxa_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg1_femur_joint_act" joint="leg1_femur_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg1_tibia_joint_act" joint="leg1_tibia_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg3_coxa_joint_act" joint="leg3_coxa_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg3_femur_joint_act" joint="leg3_femur_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg3_tibia_joint_act" joint="leg3_tibia_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg4_coxa_joint_act" joint="leg4_coxa_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg4_femur_joint_act" joint="leg4_femur_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg4_tibia_joint_act" joint="leg4_tibia_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg2_coxa_joint_act" joint="leg2_coxa_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg2_femur_joint_act" joint="leg2_femur_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+    <position name="leg2_tibia_joint_act" joint="leg2_tibia_joint" kp="280" kv="12" ctrlrange="-100 100" forcelimited="true" forcerange="-200 200"/>
+  </actuator>
+</mujoco>
