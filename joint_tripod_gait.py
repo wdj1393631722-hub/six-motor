@@ -8,7 +8,8 @@
 半周期三相位（摆动组）:
   swing  — 抬腿 + coxa 前摆（单相连续）
   place  — 落地
-  push   — 六腿同步前蹬，摆动组回中、支撑组到后位
+  push   — 3a 全腿前蹬（摆动组保持前位）→ 3b 摆动组回中、支撑组后撤
+           （对齐 TEST-4.0 ③a/③b，避免落足后立即收脚把机身拽后退）
 """
 from __future__ import annotations
 
@@ -24,6 +25,10 @@ LIFT_UD_DEG = 28.0
 SWING_FWD_DEG = 38.0
 STANCE_REAR_DEG = 32.0
 PUSH_FWD_DEG = 22.0
+# TEST-4.0 CRAWL_PUSH_HALF_FB_DEG；push 前半段从此值起蹬
+PUSH_HALF_FWD_DEG = 15.0
+# push 相 3a(蹬进)/3b(收脚就位) 时长比
+PUSH_DRIVE_FRAC = 0.5
 
 # 单半周期时长 (s)：swing / place / push（缩短 → 步频更快）
 PHASE_SWING_S = 0.40
@@ -174,19 +179,35 @@ def _offsets_place(
 def _offsets_push(
     group: TripodGroup, u: float, first_cycle: bool = False
 ) -> Dict[int, LegOffset]:
-    """六腿前蹬；摆动组由前位回中，支撑组保持/到达后位。"""
+    """
+    六腿前蹬，对齐 TEST-4.0 ③a / ③b：
+
+    3a — 摆动组保持前位 + 全腿前蹬（先蹬再收，避免后滑）
+    3b — 摆动组回中、首周期支撑组后撤就位
+    """
     swing = _group_legs(group)
-    su = _ease(u)
-    push_wave = PUSH_FWD_DEG * math.sin(math.pi * su)
     out: Dict[int, LegOffset] = {}
+
+    if u <= PUSH_DRIVE_FRAC:
+        drive_u = _ease(u / PUSH_DRIVE_FRAC)
+        push = PUSH_HALF_FWD_DEG + (PUSH_FWD_DEG - PUSH_HALF_FWD_DEG) * drive_u
+        for leg in range(1, 7):
+            if leg in swing:
+                out[leg] = _o(_fwd(leg, SWING_FWD_DEG), 0.0)
+            elif first_cycle and group == "A":
+                out[leg] = _o(_fwd(leg, push), 0.0)
+            else:
+                out[leg] = _o(_rear(leg, STANCE_REAR_DEG) + _fwd(leg, push), 0.0)
+        return out
+
+    relocate_u = _ease((u - PUSH_DRIVE_FRAC) / max(1e-9, 1.0 - PUSH_DRIVE_FRAC))
     for leg in range(1, 7):
         if leg in swing:
-            fb = _fwd(leg, SWING_FWD_DEG * (1.0 - su))
+            fb = _fwd(leg, SWING_FWD_DEG * (1.0 - relocate_u))
         elif first_cycle and group == "A":
-            fb = _rear(leg, STANCE_REAR_DEG * su)
+            fb = _rear(leg, STANCE_REAR_DEG * relocate_u)
         else:
             fb = _rear(leg, STANCE_REAR_DEG)
-        fb += _fwd(leg, push_wave)
         out[leg] = _o(fb, 0.0)
     return out
 

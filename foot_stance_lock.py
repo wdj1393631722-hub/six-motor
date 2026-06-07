@@ -218,19 +218,26 @@ class JointGaitStanceTracker:
                 )
                 self._anchors.update(captured)
             elif phase_kind == "push":
+                stance = _stance_legs(swing_group)
                 captured = capture_foot_anchors(
                     model,
                     data,
-                    range(1, 7),
+                    stance,
                     ik.frames,
                     require_contact=True,
                 )
                 self._anchors.update(captured)
+                for leg in _group_legs(swing_group):
+                    self._anchors.pop(leg, None)
             self._last_phase_name = phase_name
 
-        # 仅蹬进相锁定六足：摆动/落地相交给摩擦+PD，避免三足硬锁把机身拽偏
         if phase_kind == "push":
-            return {leg: p.copy() for leg, p in self._anchors.items()}
+            stance = _stance_legs(swing_group)
+            return {
+                leg: p.copy()
+                for leg, p in self._anchors.items()
+                if leg in stance
+            }
         return {}
 
 
