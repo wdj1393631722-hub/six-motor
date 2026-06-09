@@ -16,11 +16,12 @@ import numpy as np
 from gymnasium import spaces
 
 from build_multi_mjcf import build_multi_mjcf, random_spawn_positions
+from ctrl_smoother import CtrlSmoother
 from enable_state import LOCOMOTION_KP, LOCOMOTION_KV, set_actuator_gains
-from foot_kinematics import load_stand_pose
+from foot_kinematics import load_stand_pose, resolve_post_enable_stand
 from gait import create_forward_tripod_gait
 from hexapod_rl_env import VX_CMD, _quat_rp
-from rl_posture import load_sim_stand_pose, sync_gait_stand
+from rl_posture import settle_multi_robots, sync_gait_stand
 from rl_reward import MAX_SPEED_VX_MPS, TRACK_VX_MPS, compute_walk_reward
 from robot_limits import all_joint_names, clamp_joint_targets
 
@@ -111,6 +112,11 @@ class _RobotSlot:
         self.home_yaw = 0.0
         self._inactive = False
         self._inactive_until = 0
+        self._ctrl_smoother = CtrlSmoother(tau=0.14)
+
+    def apply_stand_ctrl(self, data: mujoco.MjData) -> None:
+        for jn, val in self.stand_pose.items():
+            data.ctrl[_actuator_id(self._clamp_model, jn)] = float(val)
 
     def reset_pose(
         self,
@@ -154,9 +160,14 @@ class _RobotSlot:
         self.gait.reset()
         planner = self.gait._joint_crawl
         if planner is not None:
+            # 从步态周期起点开始，避免 reset 后立刻处于抬腿相
             if phase_offset is None:
-                phase_offset = float(rng.uniform(0.0, planner.cycle_time))
+                phase_offset = 0.0
             planner.t = float(phase_offset)
+            planner._prev_joints = dict(self.gait.stand)
+        self._ctrl_smoother.reset(
+            {jn[len(self.prefix) :]: v for jn, v in self.stand_pose.items()}
+        )
         self._last_action[:] = 0.0
         self._step_count = 0
         self._inactive = False
@@ -164,8 +175,11 @@ class _RobotSlot:
 
     def hold_stand(self, data: mujoco.MjData) -> None:
         """摔倒等待重生时保持站立角，避免抽搐。"""
-        for jn, val in self.stand_pose.items():
-            data.ctrl[_actuator_id(self._clamp_model, jn)] = float(val)
+        self.apply_stand_ctrl(data)
+
+    def damp_legs(self, data: mujoco.MjData) -> None:
+        for dof in self._j_dofadr:
+            data.qvel[int(dof)] *= 0.52
 
     def _gait_phase_u(self) -> float:
         planner = self.gait._joint_crawl
@@ -262,12 +276,20 @@ class _RobotSlot:
         targets: Dict[str, float] = {}
         for i, jn in enumerate(self.joint_names):
             base_name = jn[len(self.prefix) :]
-            targets[jn] = float(q_ref.get(base_name, self.stand_pose[jn])) + (
+            val = float(q_ref.get(base_name, self.stand_pose[jn])) + (
                 residual_scale * float(action[i])
             )
+            targets[jn] = val
         targets = clamp_joint_targets(self._clamp_model, targets)
-        for jn, val in targets.items():
-            data.ctrl[_actuator_id(self._clamp_model, jn)] = val
+        smoothed = self._ctrl_smoother.filter(
+            {jn[len(self.prefix) :]: targets[jn] for jn in self.joint_names},
+            control_dt,
+        )
+        for jn in self.joint_names:
+            base_name = jn[len(self.prefix) :]
+            data.ctrl[_actuator_id(self._clamp_model, jn)] = float(
+                smoothed.get(base_name, targets[jn])
+            )
         self._last_action = action.copy()
 
 
@@ -325,15 +347,9 @@ class HexapodMultiArena:
         raw = load_stand_pose()
         if raw is None:
             raise RuntimeError("缺少 generated/stand_pose_flat.json")
-        lifted = load_sim_stand_pose()
-        if lifted is None:
-            raise RuntimeError("无法生成仿真站立姿态")
-        stand_pose, body_z = lifted
-        print(
-            f"[arena] 机身抬高: body_z={body_z:.3f} m "
-            f"(+{body_z - raw[1]:.3f} m)",
-            flush=True,
-        )
+        coxa_pose, _ = raw
+        stand_pose, body_z = resolve_post_enable_stand(self.model, coxa_pose)
+        print(f"[arena] 使能完成站立 body_z={body_z:.3f} m", flush=True)
 
         from build_multi_mjcf import _grid_xy
 
@@ -407,9 +423,6 @@ class HexapodMultiArena:
         else:
             xy = bot.home_xy
             yaw = bot.home_yaw
-        phase = None
-        if bot.gait._joint_crawl is not None:
-            phase = float(self._np_random.uniform(0.0, bot.gait._joint_crawl.cycle_time))
         vx_scale = float(self._np_random.uniform(0.92, 1.08))
         bot.reset_pose(
             self.data,
@@ -417,9 +430,22 @@ class HexapodMultiArena:
             noise_rad,
             xy=xy,
             yaw=yaw,
-            phase_offset=phase,
+            phase_offset=0.0,
             vx_scale=vx_scale,
         )
+        bot.apply_stand_ctrl(self.data)
+        for _ in range(80):
+            mujoco.mj_step(self.model, self.data)
+        adr = bot._root_qposadr
+        bot.body_z = float(self.data.qpos[adr + 2])
+        for jn in bot.joint_names:
+            jadr = self.model.jnt_qposadr[
+                mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, jn)
+            ]
+            bot.stand_pose[jn] = float(self.data.qpos[jadr])
+        base_name = {jn[len(bot.prefix) :]: v for jn, v in bot.stand_pose.items()}
+        sync_gait_stand(bot.gait, base_name, bot.body_z)
+        bot._ctrl_smoother.reset(base_name)
 
     def _mark_inactive(self, bot: _RobotSlot) -> None:
         bot._inactive = True
@@ -463,11 +489,6 @@ class HexapodMultiArena:
 
         for bot, xy in zip(self.robots, spawns):
             yaw = float(self._np_random.uniform(-math.pi, math.pi))
-            phase = None
-            if bot.gait._joint_crawl is not None:
-                phase = float(
-                    self._np_random.uniform(0.0, bot.gait._joint_crawl.cycle_time)
-                )
             vx_scale = float(self._np_random.uniform(0.86, 1.14))
             bot.reset_pose(
                 self.data,
@@ -475,9 +496,24 @@ class HexapodMultiArena:
                 noise,
                 xy=xy,
                 yaw=yaw,
-                phase_offset=phase,
+                phase_offset=0.0,
                 vx_scale=vx_scale,
             )
+
+        settle_multi_robots(self.model, self.data, self.robots)
+        for bot in self.robots:
+            adr = bot._root_qposadr
+            bot.body_z = float(self.data.qpos[adr + 2])
+            for jn in bot.joint_names:
+                jadr = self.model.jnt_qposadr[
+                    mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, jn)
+                ]
+                bot.stand_pose[jn] = float(self.data.qpos[jadr])
+            base_name = {jn[len(bot.prefix) :]: v for jn, v in bot.stand_pose.items()}
+            sync_gait_stand(bot.gait, base_name, bot.body_z)
+            bot._ctrl_smoother.reset(base_name)
+            bot._warmup_remaining = RL_WARMUP_STAND_STEPS
+            bot._warmup_active = False
         mujoco.mj_forward(self.model, self.data)
         self._global_step = 0
         obs = self._get_obs_batch()
@@ -498,6 +534,10 @@ class HexapodMultiArena:
 
         for _ in range(self._n_substeps):
             mujoco.mj_step(self.model, self.data)
+
+        for bot in self.robots:
+            if not bot._inactive:
+                bot.damp_legs(self.data)
 
         rewards = np.zeros(self.n_robots, dtype=np.float32)
         terminated = np.zeros(self.n_robots, dtype=bool)

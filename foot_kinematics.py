@@ -1387,6 +1387,26 @@ def solve_stand_at_height(
     return out, bz
 
 
+def resolve_post_enable_stand(
+    model: mujoco.MjModel,
+    coxa_pose: Dict[str, float],
+) -> Tuple[Dict[str, float], float]:
+    """
+    使能完成（ENABLED）后的站立关节角与 body_z。
+    与 run_locomotion 按 E 走满撑起+软站立后的目标一致：
+    prone + ENABLE_BODY_LIFT_M → solve_stand_at_height。
+    """
+    loaded = load_prone_pose()
+    if loaded is not None:
+        prone, prone_bz = loaded
+    else:
+        prone, prone_bz = nominal_prone_pose(model)
+    data = mujoco.MjData(model)
+    prone_bz = resolve_prone_body_height(model, data, prone, prone_bz)
+    stand_bz = float(prone_bz) + float(ENABLE_BODY_LIFT_M)
+    return solve_stand_at_height(model, prone, coxa_pose, stand_bz)
+
+
 def resolve_prone_body_height(
     model: mujoco.MjModel,
     data: mujoco.MjData,

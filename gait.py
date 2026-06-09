@@ -264,7 +264,8 @@ class TripodGait:
             and abs(vx) > self.p.cmd_deadband
         ):
             scale = min(speed / CRAWL_NOMINAL_SPEED_MPS, 2.2)
-            direction = 1.0 if vx >= 0 else -1.0
+            # 关节偏置表 fb 正方向与 MuJoCo base +Y 前进相反
+            direction = -1.0 if vx >= 0 else 1.0
             self.last_body_x = 0.0
             physics = self.use_physics_gait
             self.last_kinematic_only = not physics

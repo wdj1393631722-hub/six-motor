@@ -21,16 +21,14 @@ KEY_RIGHT = 262
 
 CONTROL_HELP = """
 六足步态按键（关节三角步态：1/3/5 与 2/4/6 交替抬腿蹬进）:
-  E        使能（4s 撑起 → 0.6s 软站立 → 可行走）
-  D        失能（5s 缓降 → 无力矩趴地）
-  I 或 ↑   前进（coxa 前摆 + 六腿蹬进，须先使能）
+  I 或 ↑   前进（coxa 前摆 + 六腿蹬进）
   K 或 ↓   后退
   J 或 ←   左转
   L 或 →   右转
   P        停止
-  Z / X    使能站立时 关节撑起/降低 ±1mm（改 femur/tibia，足底仍贴地）
-  S        使能站立时 保存关节角+高度到 stand_pose_flat.json
-  B        重置为失能趴地
+  Z / X    站立时 关节撑起/降低 ±1mm（改 femur/tibia，足底仍贴地）
+  S        站立时 保存关节角+高度到 stand_pose_flat.json
+  B        重置为站立
 鼠标仍用于旋转/平移视角（MuJoCo 默认）。
 """
 
@@ -73,17 +71,9 @@ def make_key_handler(
         elif keycode == KEY_P:
             cmd.vx = cmd.vy = cmd.omega = 0.0
             print("[步态] 停止")
-        elif keycode == KEY_E:
-            cmd.vx = cmd.vy = cmd.omega = 0.0
-            if on_enable is not None:
-                on_enable()
-        elif keycode == KEY_D:
-            cmd.vx = cmd.vy = cmd.omega = 0.0
-            if on_disable is not None:
-                on_disable()
         elif keycode == KEY_B:
             cmd.vx = cmd.vy = cmd.omega = 0.0
-            print("[步态] 重置为失能趴地")
+            print("[步态] 重置为站立")
             if on_reset is not None:
                 on_reset()
 

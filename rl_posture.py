@@ -157,21 +157,126 @@ def _physics_settle_stand(
     body_z: float,
     *,
     steps: int = 2500,
+    root_qposadr: int = 0,
 ) -> Tuple[Dict[str, float], float]:
     """重力+摩擦下 PD 平衡，得到与足底支撑一致的关节角与机身高度。"""
     set_actuator_gains(model, LOCOMOTION_KP, LOCOMOTION_KV)
-    data.qpos[0:3] = 0.0, 0.0, float(body_z)
-    data.qpos[3:7] = 1.0, 0.0, 0.0, 0.0
+    adr = int(root_qposadr)
+    data.qpos[adr : adr + 3] = (
+        float(data.qpos[adr]),
+        float(data.qpos[adr + 1]),
+        float(body_z),
+    )
+    data.qvel[adr : adr + 6] = 0.0
     for jn, val in pose.items():
-        adr = model.jnt_qposadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, jn)]
-        data.qpos[adr] = float(val)
-    data.qvel[:] = 0.0
+        jadr = model.jnt_qposadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, jn)]
+        data.qpos[jadr] = float(val)
+        dof = int(model.jnt_dofadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, jn)])
+        data.qvel[dof] = 0.0
     for jn, val in pose.items():
         aid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"{jn}_act")
         data.ctrl[aid] = float(val)
     for _ in range(int(steps)):
         mujoco.mj_step(model, data)
-    return read_joint_pose(model, data), float(data.qpos[2])
+    return read_joint_pose(model, data), float(data.qpos[adr + 2])
+
+
+# RL reset：物理落足后直接进入站立控制（无使能按键/软站立等待）
+RL_SETTLE_STEPS = 200
+RL_WARMUP_STAND_STEPS = 0
+
+
+def init_rl_standing_pose(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pose: Dict[str, float],
+    body_z: float,
+    *,
+    noise_rad: float = 0.0,
+    rng=None,
+    settle_steps: int = RL_SETTLE_STEPS,
+    root_qposadr: int = 0,
+    root_xy: Optional[Tuple[float, float]] = None,
+    root_yaw: Optional[float] = None,
+) -> Tuple[Dict[str, float], float]:
+    """
+    RL / 仿真初始姿态：标定站立角 → PD 物理落足 → 返回实际支撑角与机身高度。
+    """
+    adr = int(root_qposadr)
+    trial = dict(pose)
+    if noise_rad > 0.0 and rng is not None:
+        for jn in list(trial.keys()):
+            trial[jn] += float(rng.uniform(-noise_rad, noise_rad))
+    data.qvel[:] = 0.0
+    if model.nq >= adr + 7:
+        if root_xy is not None:
+            data.qpos[adr] = float(root_xy[0])
+            data.qpos[adr + 1] = float(root_xy[1])
+        data.qpos[adr + 2] = float(body_z)
+        if root_yaw is not None:
+            half = float(root_yaw) * 0.5
+            data.qpos[adr + 3 : adr + 7] = (
+                float(np.cos(half)),
+                0.0,
+                0.0,
+                float(np.sin(half)),
+            )
+        elif root_xy is not None:
+            data.qpos[adr + 3 : adr + 7] = 1.0, 0.0, 0.0, 0.0
+    for jn, val in trial.items():
+        jadr = model.jnt_qposadr[
+            mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, jn)
+        ]
+        data.qpos[jadr] = float(val)
+    mujoco.mj_forward(model, data)
+    return settle_stand_for_control(
+        model,
+        data,
+        trial,
+        body_z,
+        steps=settle_steps,
+        root_qposadr=adr,
+    )
+
+
+# 兼容旧名
+init_rl_enabled_stand = init_rl_standing_pose
+
+
+def settle_stand_for_control(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pose: Dict[str, float],
+    body_z: float,
+    *,
+    steps: int = RL_SETTLE_STEPS,
+    root_qposadr: int = 0,
+) -> Tuple[Dict[str, float], float]:
+    """RL/Arena 重置后：PD 持 stand 角，让六足真撑住机身再开始步态。"""
+    return _physics_settle_stand(
+        model,
+        data,
+        pose,
+        body_z,
+        steps=steps,
+        root_qposadr=root_qposadr,
+    )
+
+
+def settle_multi_robots(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    robots,
+    *,
+    steps: int = RL_SETTLE_STEPS,
+) -> None:
+    """多机场景：全部机器人同时 PD 站立落足。"""
+    set_actuator_gains(model, LOCOMOTION_KP, LOCOMOTION_KV)
+    data.qvel[:] = 0.0
+    for bot in robots:
+        bot.apply_stand_ctrl(data)
+    for _ in range(int(steps)):
+        mujoco.mj_step(model, data)
 
 
 def lift_stand_for_rl(

@@ -141,6 +141,8 @@ def _run_viewer_loop(env, action_fn, label: str) -> None:
     print("操作：鼠标拖拽旋转视角，滚轮缩放，关闭窗口结束。")
 
     obs, _ = env.reset()
+    if env.render_mode == "human":
+        env.render()
     total_r = 0.0
     episode = 1
     while True:

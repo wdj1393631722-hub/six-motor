@@ -21,24 +21,28 @@ from enable_state import _leg_femur_tibia_split
 from tripod_planner import TRIPOD_A, TRIPOD_B
 
 # --- 幅度（度）---
-LIFT_UD_DEG = 28.0
-SWING_FWD_DEG = 38.0
-STANCE_REAR_DEG = 32.0
-PUSH_FWD_DEG = 22.0
-# TEST-4.0 CRAWL_PUSH_HALF_FB_DEG；push 前半段从此值起蹬
-PUSH_HALF_FWD_DEG = 15.0
+LIFT_UD_DEG = 44.0
+SWING_FWD_DEG = 55.0
+STANCE_REAR_DEG = 38.0
+PUSH_FWD_DEG = 26.0
+PUSH_HALF_FWD_DEG = 12.0
+# leg6 coxa 几何峰值较低，略减前摆避免侧偏
+SWING_FWD_DEG_BY_LEG: Dict[int, float] = {6: 32.0}
+PUSH_FWD_DEG_BY_LEG: Dict[int, float] = {6: 16.0}
+PUSH_HALF_FWD_DEG_BY_LEG: Dict[int, float] = {6: 9.0}
 # push 相 3a(蹬进)/3b(收脚就位) 时长比
 PUSH_DRIVE_FRAC = 0.5
 
-# 单半周期时长 (s)：swing / place / push（缩短 → 步频更快）
-PHASE_SWING_S = 0.40
+# 单半周期时长 (s)：swing / place / push
+PHASE_SWING_S = 0.44
 PHASE_PLACE_S = 0.12
-PHASE_PUSH_S = 0.30
-PHASE_SLOWDOWN = 1.2
+PHASE_PUSH_S = 0.34
+PHASE_SLOWDOWN = 1.0
 HALF_CYCLE_BODY_Y = 0.058
 
-# 关节指令一阶平滑时间常数 (s)，越小越跟手、越大越柔
-JOINT_SMOOTH_TAU = 0.09
+# 关节平滑：摆动相要快（否则抬腿/前摆被滤没），push 相稍柔
+JOINT_SMOOTH_TAU = 0.038
+SWING_SMOOTH_TAU = 0.005
 
 BODY_FORWARD_AXIS = "Y"
 
@@ -51,7 +55,8 @@ _FWD_SIGN: Dict[int, float] = {
     6: -1.0,
 }
 
-_LIFT_UD_SIGN: Dict[int, float] = {leg: -1.0 for leg in range(1, 7)}
+# MuJoCo 中 femur/tibia 抬腿方向：六腿均为 +ud → 足端抬高（TEST-4.0 表 leg5/6 为负是固件坐标约定）
+_LIFT_UD_SIGN: Dict[int, float] = {leg: 1.0 for leg in range(1, 7)}
 
 LegOffset = Tuple[float, float]
 TripodGroup = str  # "A" or "B"
@@ -63,6 +68,18 @@ def _o(fb: float, ud: float) -> LegOffset:
 
 def _z() -> LegOffset:
     return (0.0, 0.0)
+
+
+def _swing_fwd_deg(leg: int) -> float:
+    return SWING_FWD_DEG_BY_LEG.get(leg, SWING_FWD_DEG)
+
+
+def _push_fwd_deg(leg: int) -> float:
+    return PUSH_FWD_DEG_BY_LEG.get(leg, PUSH_FWD_DEG)
+
+
+def _push_half_deg(leg: int) -> float:
+    return PUSH_HALF_FWD_DEG_BY_LEG.get(leg, PUSH_HALF_FWD_DEG)
 
 
 def _fwd(leg: int, deg: float) -> float:
@@ -117,15 +134,10 @@ def build_macro_phases() -> List[MacroPhase]:
 
 
 def _stance_prep_fraction(phase_kind: str, u: float) -> float:
-    """对方组 swing+place 内，支撑腿 0→后位 的归一化进度。"""
-    total = PHASE_SWING_S + PHASE_PLACE_S
-    if phase_kind == "swing":
-        t = u * PHASE_SWING_S
-    elif phase_kind == "place":
-        t = PHASE_SWING_S + u * PHASE_PLACE_S
-    else:
-        return 1.0
-    return _ease(t / total)
+    """对方组 place 相内，支撑腿 0→后位（swing 相保持中位，减少侧向力矩）。"""
+    if phase_kind != "place":
+        return 0.0
+    return _ease(u)
 
 
 def _stance_hold_during_swing_place(
@@ -135,13 +147,11 @@ def _stance_hold_during_swing_place(
     first_cycle: bool,
 ) -> Dict[int, LegOffset]:
     """对方组摆动/落地时，本组支撑腿由中位平滑后撤到位。"""
+    del first_cycle
     out: Dict[int, LegOffset] = {}
     prep = _stance_prep_fraction(phase_kind, u)
     for leg in _stance_legs(group):
-        if first_cycle and group == "A":
-            out[leg] = _z()
-        else:
-            out[leg] = _o(_rear(leg, STANCE_REAR_DEG * prep), 0.0)
+        out[leg] = _o(_rear(leg, STANCE_REAR_DEG * prep), 0.0)
     return out
 
 
@@ -151,11 +161,11 @@ def _offsets_swing(
     swing = _group_legs(group)
     out = {leg: _z() for leg in range(1, 7)}
     su = _ease(u)
-    rear_start = (
-        0.0 if (first_cycle and group == "A") else STANCE_REAR_DEG
-    )
+    rear_start = STANCE_REAR_DEG
     for leg in swing:
-        fb = _rear(leg, rear_start * (1.0 - su)) + _fwd(leg, SWING_FWD_DEG * su)
+        fb = _rear(leg, rear_start * (1.0 - su)) + _fwd(
+            leg, _swing_fwd_deg(leg) * su
+        )
         ud = _lift_profile(u, LIFT_UD_DEG)
         out[leg] = _o(fb, ud)
     out.update(_stance_hold_during_swing_place(group, "swing", u, first_cycle))
@@ -169,7 +179,7 @@ def _offsets_place(
     out = {leg: _z() for leg in range(1, 7)}
     su = _ease(u)
     for leg in swing:
-        fb = _fwd(leg, SWING_FWD_DEG)
+        fb = _fwd(leg, _swing_fwd_deg(leg))
         ud = _lift_profile(1.0 - su, LIFT_UD_DEG)
         out[leg] = _o(fb, ud)
     out.update(_stance_hold_during_swing_place(group, "place", u, first_cycle))
@@ -180,35 +190,37 @@ def _offsets_push(
     group: TripodGroup, u: float, first_cycle: bool = False
 ) -> Dict[int, LegOffset]:
     """
-    六腿前蹬，对齐 TEST-4.0 ③a / ③b：
-
-    3a — 摆动组保持前位 + 全腿前蹬（先蹬再收，避免后滑）
-    3b — 摆动组回中、首周期支撑组后撤就位
+    对齐 TEST-4.0 ③a / ③b：
+    3a — 仅刚落地的摆动组前蹬发力；支撑组保持后位不动
+    3b — 摆动组回中；支撑组后撤就位
     """
+    del first_cycle
     swing = _group_legs(group)
+    stance = _stance_legs(group)
     out: Dict[int, LegOffset] = {}
 
     if u <= PUSH_DRIVE_FRAC:
         drive_u = _ease(u / PUSH_DRIVE_FRAC)
-        push = PUSH_HALF_FWD_DEG + (PUSH_FWD_DEG - PUSH_HALF_FWD_DEG) * drive_u
-        for leg in range(1, 7):
-            if leg in swing:
-                out[leg] = _o(_fwd(leg, SWING_FWD_DEG), 0.0)
-            elif first_cycle and group == "A":
-                out[leg] = _o(_fwd(leg, push), 0.0)
-            else:
-                out[leg] = _o(_rear(leg, STANCE_REAR_DEG) + _fwd(leg, push), 0.0)
+        for leg in swing:
+            sw = _swing_fwd_deg(leg)
+            half = _push_half_deg(leg)
+            # 3a：落足前位 → 半蹬（TEST-4.0 ③a：30°→15°），足端后收以推进机身
+            push = sw - (sw - half) * drive_u
+            out[leg] = _o(_fwd(leg, push), 0.0)
+        # 3a：支撑组保持中位（TEST-4.0 ③a 对侧腿 fb=0），避免侧向拽偏
+        for leg in stance:
+            out[leg] = _z()
         return out
 
     relocate_u = _ease((u - PUSH_DRIVE_FRAC) / max(1e-9, 1.0 - PUSH_DRIVE_FRAC))
-    for leg in range(1, 7):
-        if leg in swing:
-            fb = _fwd(leg, SWING_FWD_DEG * (1.0 - relocate_u))
-        elif first_cycle and group == "A":
-            fb = _rear(leg, STANCE_REAR_DEG * relocate_u)
-        else:
-            fb = _rear(leg, STANCE_REAR_DEG)
+    for leg in swing:
+        half = _push_half_deg(leg)
+        # 3b：半蹬 → 回中（TEST-4.0 ③b：15°→0°）
+        fb = _fwd(leg, half * (1.0 - relocate_u))
         out[leg] = _o(fb, 0.0)
+    # 3b：支撑组 0 → 后位，为下一半周期做准备
+    for leg in stance:
+        out[leg] = _o(_rear(leg, STANCE_REAR_DEG * relocate_u), 0.0)
     return out
 
 
@@ -310,16 +322,23 @@ class JointTripodCrawlPlanner:
             }
         return offsets_to_joints(self.stand, offs)
 
+    def _smooth_tau_now(self) -> float:
+        kind = self.current_phase().kind
+        if kind in ("swing", "place"):
+            return SWING_SMOOTH_TAU
+        return self.smooth_tau
+
     def _smooth_joints(
         self, target: Dict[str, float], dt: float
     ) -> Dict[str, float]:
         if dt <= 0:
             return dict(target)
-        alpha = 1.0 - math.exp(-dt / max(self.smooth_tau, 1e-4))
+        tau = self._smooth_tau_now()
+        alpha = 1.0 - math.exp(-dt / max(tau, 1e-4))
         out = dict(self._prev_joints)
         for jn, val in target.items():
             prev = out.get(jn, val)
-            out[jn] = prev + alpha * (val - prev)
+            out[jn] = prev + alpha * (float(val) - prev)
         self._prev_joints = out
         return out
 
@@ -335,7 +354,7 @@ class JointTripodCrawlPlanner:
         self.t += dt * rate
         phase_t = self.t % self.cycle_time
         cycles = int(self.t // self.cycle_time)
-        raw = self._raw_joints(phase_t, direction, first_cycle=(cycles == 0))
+        raw = self._raw_joints(phase_t, direction, first_cycle=False)
         if physics:
             self.body_y = 0.0
             self.last_body_y = 0.0
@@ -347,6 +366,10 @@ class JointTripodCrawlPlanner:
             alpha = 1.0 - math.exp(-dt / max(self.smooth_tau, 1e-4))
             self.body_y += alpha * (target_y - self.body_y)
             self.last_body_y = self.body_y
+        phase_kind = self.current_phase().kind
+        if phase_kind in ("swing", "place"):
+            self._prev_joints = dict(raw)
+            return raw
         return self._smooth_joints(raw, dt)
 
     def current_phase(self) -> MacroPhase:

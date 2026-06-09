@@ -86,6 +86,24 @@ def symmetrize_all_pairs(pose: Dict[str, float]) -> Dict[str, float]:
 _REF_COXA_SIGN: Dict[Tuple[int, int], int] = {(1, 6): 1, (3, 4): -1, (2, 5): -1}
 
 
+def symmetrize_coxa_average(pose: Dict[str, float]) -> Dict[str, float]:
+    """左右 coxa 取平均幅值并严格镜像，消除标定偏差导致的步态侧偏。"""
+    out = dict(pose)
+    for ref_leg, mir_leg in MIRROR_PAIRS:
+        kr = f"leg{ref_leg}_coxa_joint"
+        km = f"leg{mir_leg}_coxa_joint"
+        cr = float(out[kr])
+        cm = float(out[km])
+        mag = 0.5 * (abs(cr) + abs(cm))
+        if abs(cr) >= abs(cm):
+            s = 1.0 if cr >= 0.0 else -1.0
+        else:
+            s = -1.0 if cm >= 0.0 else 1.0
+        out[kr] = s * mag
+        out[km] = -s * mag
+    return out
+
+
 def symmetrize_coxa_pairs(pose: Dict[str, float]) -> Dict[str, float]:
     """俯视图对称：coxa_mir = -coxa_ref，幅值取两侧 |coxa| 的较大值。"""
     out = dict(pose)

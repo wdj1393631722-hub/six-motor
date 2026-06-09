@@ -3,11 +3,9 @@
 SIX-MOTOR 六足 MuJoCo 仿真 — 关节三角步态（抬腿/前摆/蹬进）
 
 按键（viewer 窗口激活时）:
-  E        使能（4s 撑起 → 0.6s 软站立）
-  D        失能（5s 缓降 → 无力矩）
-  I/↑ K/↓ J/← L/→  前进/后退/左转/右转（须先使能）
+  I/↑ K/↓ J/← L/→  前进/后退/左转/右转
   P        停止
-  B        重置为失能趴地
+  B        重置为站立
 """
 from __future__ import annotations
 
@@ -72,11 +70,23 @@ except ImportError:
     nominal_prone_pose = None
 
 def apply_kinematic_pose(model, data, pose: dict, body_z: float) -> None:
-    """无力矩时保持标定趴地/站立姿态（仅更新位姿，不施力）。"""
+    """运动学相：直接写 root+关节（仅用于失能/使能插值，正常站立/行走勿用）。"""
     from foot_kinematics import _set_pose
 
     _set_pose(model, data, clamp_joint_targets(model, pose), float(body_z))
     mujoco.mj_forward(model, data)
+
+
+def _physics_substeps(model, data, dt: float) -> None:
+    for _ in range(max(1, int(dt / model.opt.timestep))):
+        mujoco.mj_step(model, data)
+
+
+def _hold_stand_physics(model, data, pose: dict, dt: float) -> None:
+    """站立：PD 持角 + 物理步进（不每帧清零 qpos，避免按 I 时瞬移）。"""
+    apply_ctrl(model, data, pose)
+    _physics_substeps(model, data, dt)
+    damp_leg_joint_velocities(model, data)
 
 
 def joint_qposadr(model, jname: str) -> int:
@@ -172,6 +182,55 @@ def _apply_file_stand_pose(gait) -> None:
         gait.p.body_height = float(body_z)
 
 
+def reset_standing(
+    model,
+    data,
+    gait,
+    enable_ctrl: EnableController | None = None,
+) -> tuple[dict, float]:
+    """站立初始态：直接使用使能完成后的关节角与机身高度，可直接行走。"""
+    from foot_kinematics import resolve_post_enable_stand
+    from rl_posture import sync_gait_stand
+
+    _apply_file_stand_pose(gait)
+    mujoco.mj_resetData(model, data)
+
+    stand_pose, stand_bz = resolve_post_enable_stand(model, gait.stand)
+    data.qpos[0] = 0.0
+    data.qpos[1] = 0.0
+    data.qpos[2] = float(stand_bz)
+    data.qpos[3] = 1.0
+    data.qpos[4] = 0.0
+    data.qpos[5] = 0.0
+    data.qpos[6] = 0.0
+    for jname, angle in clamp_joint_targets(model, stand_pose).items():
+        adr = joint_qposadr(model, jname)
+        data.qpos[adr] = float(angle)
+    data.qvel[:] = 0.0
+    mujoco.mj_forward(model, data)
+    sync_gait_stand(gait, stand_pose, stand_bz)
+    if getattr(gait, "_model", None) is not None:
+        gait._init_kinematics()
+    else:
+        gait.reset()
+
+    if enable_ctrl is not None:
+        enable_ctrl.load_stand(
+            stand_pose, body_z=stand_bz, prone_body_z=stand_bz - float(ENABLE_BODY_LIFT_M)
+        )
+        enable_ctrl.stand_pose = dict(stand_pose)
+        enable_ctrl.stand_body_z = float(stand_bz)
+        enable_ctrl.phase = EnablePhase.ENABLED
+        enable_ctrl.soft_remain_s = 0.0
+        enable_ctrl.ramp_t = 0.0
+
+    set_actuator_gains(model, STAND_KP, STAND_KV)
+    apply_ctrl(model, data, stand_pose)
+    _physics_substeps(model, data, 0.08)
+    damp_leg_joint_velocities(model, data)
+    return stand_pose, stand_bz
+
+
 def reset_disabled(model, data, gait, enable_ctrl: EnableController) -> None:
     """失能趴地：无力矩，六足足底平面贴地。"""
     _apply_file_stand_pose(gait)
@@ -192,13 +251,13 @@ def reset_disabled(model, data, gait, enable_ctrl: EnableController) -> None:
     enable_ctrl.load_stand(
         gait.stand, body_z=gait.p.body_height, prone_body_z=body_z
     )
-    stand_bz = float(body_z) + float(ENABLE_BODY_LIFT_M)
     if solve_stand_at_height is not None:
-        stand_pose, stand_bz = solve_stand_at_height(
-            model, prone, gait.stand, stand_bz
-        )
+        from foot_kinematics import resolve_post_enable_stand
+
+        stand_pose, stand_bz = resolve_post_enable_stand(model, gait.stand)
     else:
         stand_pose = dict(prone)
+        stand_bz = float(body_z) + float(ENABLE_BODY_LIFT_M)
     enable_ctrl.stand_pose = dict(stand_pose)
     enable_ctrl.stand_body_z = float(stand_bz)
     enable_ctrl.init_disabled(model, data, prone=prone)
@@ -226,25 +285,20 @@ def main():
     gait.use_joint_gait = True
     gait.use_slot_gait = False
     print("正在加载模型与姿态…", flush=True)
-    _apply_file_stand_pose(gait)
     enable_ctrl = EnableController()
-    reset_disabled(model, data, gait, enable_ctrl)
+    stand_pose, stand_bz = reset_standing(model, data, gait, enable_ctrl)
     if load_stand_pose is not None:
-        loaded = load_stand_pose()
-        if loaded is not None:
-            import math
+        import math
 
-            _, sbz = loaded
-            print(
-                f"站立姿态: generated/stand_pose_flat.json  "
-                f"名义高度={sbz*1000:.0f} mm  "
-                f"物理站立={enable_ctrl.stand_body_z*1000:.0f} mm"
-            )
-            for leg in range(1, 7):
-                c = gait.stand[f"leg{leg}_coxa_joint"]
-                print(f"  leg{leg} coxa {math.degrees(c):+.1f}°")
+        print(
+            f"站立姿态: 使能完成参数  body_z={stand_bz*1000:.0f} mm"
+        )
+        for leg in range(1, 7):
+            c = stand_pose[f"leg{leg}_coxa_joint"]
+            print(f"  leg{leg} coxa {math.degrees(c):+.1f}°")
+    print("已站立，可直接 I 前进（无需按 E 使能）", flush=True)
     act_map = build_actuator_map(model)
-    ctrl_smoother = CtrlSmoother(tau=0.14)
+    ctrl_smoother = CtrlSmoother(tau=0.038)
     locomotion_gains = False
 
     cmd = VelocityCommand()
@@ -255,13 +309,7 @@ def main():
         gait.reset()
         ctrl_smoother.reset(gait.stand)
         locomotion_gains = False
-        reset_disabled(model, data, gait, enable_ctrl)
-
-    def on_enable():
-        enable_ctrl.enable(model, data)
-
-    def on_disable():
-        enable_ctrl.disable(model, data)
+        reset_standing(model, data, gait, enable_ctrl)
 
     KEY_Z, KEY_X, KEY_S = 90, 88, 83
     base_key_callback = make_key_handler(
@@ -269,8 +317,6 @@ def main():
         max_v=max_v,
         max_turn=max_turn,
         on_reset=on_reset,
-        on_enable=on_enable,
-        on_disable=on_disable,
     )
 
     def key_callback(keycode: int) -> None:
@@ -357,6 +403,7 @@ def main():
             viewer.cam.azimuth = 140
             last = time.time()
             last_phase = ""
+            was_walking = False
             while viewer.is_running():
                 now = time.time()
                 dt = now - last
@@ -379,22 +426,23 @@ def main():
                 else:
                     enable_targets = enable_ctrl.step(model, data, dt)
 
-                if enable_ctrl.allows_gait and (
+                walking = enable_ctrl.allows_gait and (
                     abs(cmd.vx) > 1e-6
                     or abs(cmd.vy) > 1e-6
                     or abs(cmd.omega) > 1e-6
-                ):
+                )
+                if walking and not was_walking:
+                    gait.reset()
+                    ctrl_smoother.reset(gait.stand)
+                was_walking = walking
+
+                if walking:
                     targets = gait.step(dt, cmd.vx, cmd.vy, cmd.omega, sim_data=data)
                 elif enable_targets is not None:
                     targets = enable_targets
                 else:
                     targets = None
 
-                walking = enable_ctrl.allows_gait and (
-                    abs(cmd.vx) > 1e-6
-                    or abs(cmd.vy) > 1e-6
-                    or abs(cmd.omega) > 1e-6
-                )
                 if walking and gait.use_joint_gait and gait.use_physics_gait:
                     if not locomotion_gains:
                         set_actuator_gains(model, LOCOMOTION_KP, LOCOMOTION_KV)
@@ -420,6 +468,12 @@ def main():
                             targets,
                         )
                     if walking and gait.use_joint_gait and gait.use_physics_gait:
+                        ph = gait.last_phase or ""
+                        ctrl_smoother.tau = (
+                            0.006
+                            if ("swing" in ph or "place" in ph)
+                            else 0.038
+                        )
                         ctrl_targets = ctrl_smoother.filter(ctrl_targets, dt)
                     apply_ctrl(model, data, ctrl_targets)
 
@@ -436,17 +490,8 @@ def main():
                     EnablePhase.LIFT_RAMP,
                     EnablePhase.SOFT_STAND,
                     EnablePhase.RAMP_DOWN,
-                ) or standing_idle:
-                    pose_z = (
-                        enable_ctrl.ramp_body_z
-                        if enable_ctrl.phase
-                        in (
-                            EnablePhase.LIFT_RAMP,
-                            EnablePhase.SOFT_STAND,
-                            EnablePhase.RAMP_DOWN,
-                        )
-                        else enable_ctrl.stand_body_z
-                    )
+                ):
+                    pose_z = enable_ctrl.ramp_body_z
                     pose = (
                         targets
                         if targets is not None
@@ -455,6 +500,10 @@ def main():
                     apply_kinematic_pose(model, data, pose, pose_z)
                     if targets is not None:
                         apply_ctrl(model, data, targets)
+                elif standing_idle:
+                    _hold_stand_physics(
+                        model, data, enable_ctrl.stand_pose, dt
+                    )
                 else:
                     if (
                         walking
@@ -475,11 +524,7 @@ def main():
                     else:
                         if walking and not gait.use_joint_gait:
                             data.qpos[0] = gait.last_body_x
-                        elif walking and enable_ctrl.phase == EnablePhase.ENABLED:
-                            data.qpos[2] = enable_ctrl.stand_body_z
-                            data.qvel[2] = 0.0
-                        for _ in range(max(1, int(dt / model.opt.timestep))):
-                            mujoco.mj_step(model, data)
+                        _physics_substeps(model, data, dt)
                         if walking and gait.use_joint_gait and gait.use_physics_gait:
                             stabilize_locomotion_body(
                                 model,
@@ -511,8 +556,7 @@ def main():
 
                 viewer.sync()
     except TypeError:
-        print("无键盘控制：自动使能并前进 15 秒…")
-        enable_ctrl.enable(model, data)
+        print("无键盘控制：自动前进 15 秒…")
         cmd.vx = max_v
         t0 = time.time()
         while time.time() - t0 < 15:

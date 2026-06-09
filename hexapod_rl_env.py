@@ -17,9 +17,12 @@ import numpy as np
 from gymnasium import spaces
 
 from enable_state import LOCOMOTION_KP, LOCOMOTION_KV, set_actuator_gains
-from foot_kinematics import load_stand_pose
+from body_stabilizer import stabilize_locomotion_body
+from ctrl_smoother import CtrlSmoother
+from foot_kinematics import load_stand_pose, resolve_post_enable_stand
+from foot_stance_lock import blend_stance_ctrl_targets, damp_leg_joint_velocities
 from gait import create_forward_tripod_gait
-from rl_posture import load_sim_stand_pose, sync_gait_stand
+from rl_posture import sync_gait_stand
 from rl_reward import MAX_SPEED_VX_MPS, TRACK_VX_MPS, compute_walk_reward
 from robot_limits import all_joint_names, clamp_joint_targets
 
@@ -78,10 +81,13 @@ class HexapodFlatWalkEnv(gym.Env):
         self.data = mujoco.MjData(self.model)
         self._n_substeps = max(1, int(round(control_dt / self.model.opt.timestep)))
 
-        loaded = load_sim_stand_pose()
+        loaded = load_stand_pose()
         if loaded is None:
             raise RuntimeError("缺少 generated/stand_pose_flat.json，请先标定站立姿态")
-        self.stand_pose, self.body_z = loaded
+        coxa_pose, _ = loaded
+        stand_pose, body_z = resolve_post_enable_stand(self.model, coxa_pose)
+        self._nominal_stand_pose, self._nominal_body_z = stand_pose, body_z
+        self.stand_pose, self.body_z = stand_pose, body_z
 
         self.joint_names = all_joint_names()
         self._j_qposadr = np.array(
@@ -123,6 +129,7 @@ class HexapodFlatWalkEnv(gym.Env):
 
         self._step_count = 0
         self._last_action = np.zeros(n_j, dtype=np.float32)
+        self._ctrl_smoother = CtrlSmoother(tau=0.14)
         self._viewer = None
         self._np_random: Optional[np.random.Generator] = None
 
@@ -230,6 +237,14 @@ class HexapodFlatWalkEnv(gym.Env):
         }
         return reward, info
 
+    def _apply_stand_hold(self) -> None:
+        """PD 持站立角。"""
+        for jn, val in self.stand_pose.items():
+            self.data.ctrl[_actuator_id(self.model, jn)] = float(val)
+        for _ in range(self._n_substeps):
+            mujoco.mj_step(self.model, self.data)
+        damp_leg_joint_velocities(self.model, self.data)
+
     def reset(
         self,
         *,
@@ -248,7 +263,12 @@ class HexapodFlatWalkEnv(gym.Env):
         noise = 0.008
         if options and "noise_rad" in options:
             noise = float(options["noise_rad"])
+        self.stand_pose = dict(self._nominal_stand_pose)
+        self.body_z = float(self._nominal_body_z)
+        sync_gait_stand(self.gait, self.stand_pose, self.body_z)
         self._set_stand_pose(noise_rad=noise)
+        self._ctrl_smoother.reset(self.stand_pose)
+        self._apply_stand_hold()
 
         self._step_count = 0
         self._last_action[:] = 0.0
@@ -269,11 +289,36 @@ class HexapodFlatWalkEnv(gym.Env):
             )
         targets = clamp_joint_targets(self.model, targets)
 
-        for jn, val in targets.items():
+        ctrl_targets = targets
+        if (
+            self.gait.use_joint_gait
+            and self.gait.use_physics_gait
+            and self.gait.last_stance_lock
+            and self.gait._ik is not None
+        ):
+            ctrl_targets = blend_stance_ctrl_targets(
+                self.model,
+                self.data,
+                self.gait._ik,
+                self.gait.last_stance_lock,
+                targets,
+            )
+        if self.gait.use_joint_gait and self.gait.use_physics_gait:
+            ctrl_targets = self._ctrl_smoother.filter(ctrl_targets, self.control_dt)
+
+        for jn, val in ctrl_targets.items():
             self.data.ctrl[_actuator_id(self.model, jn)] = val
 
         for _ in range(self._n_substeps):
             mujoco.mj_step(self.model, self.data)
+
+        if self.gait.use_joint_gait and self.gait.use_physics_gait:
+            stabilize_locomotion_body(
+                self.model,
+                self.data,
+                body_z_target=self.gait.p.body_height,
+            )
+            damp_leg_joint_velocities(self.model, self.data)
 
         reward, rinfo = self._compute_reward(action, q_ref)
         self._step_count += 1
