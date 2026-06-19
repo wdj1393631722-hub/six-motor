@@ -1,0 +1,23 @@
+{
+  "body_height": 0.07057142857142858,
+  "joints": {
+    "leg1_coxa_joint": 0.3294117647058823,
+    "leg1_femur_joint": -0.43199999999999983,
+    "leg1_tibia_joint": 0.48888888888888893,
+    "leg2_coxa_joint": -0.3294117647058824,
+    "leg2_femur_joint": -0.38066666666666654,
+    "leg2_tibia_joint": 0.0,
+    "leg3_coxa_joint": -0.4801470588235295,
+    "leg3_femur_joint": -0.3953333333333332,
+    "leg3_tibia_joint": 0.24592592592592594,
+    "leg4_coxa_joint": 0.48014705882352937,
+    "leg4_femur_joint": -0.4686666666666665,
+    "leg4_tibia_joint": 0.2996825396825397,
+    "leg5_coxa_joint": 0.3294117647058823,
+    "leg5_femur_joint": -0.29266666666666646,
+    "leg5_tibia_joint": 0.4059259259259259,
+    "leg6_coxa_joint": -0.3294117647058824,
+    "leg6_femur_joint": -0.38066666666666654,
+    "leg6_tibia_joint": 0.528888888888889
+  }
+}

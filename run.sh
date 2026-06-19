@@ -20,6 +20,9 @@ case "${1:-locomotion}" in
   forward|fwd|tripod)
     exec "$PY" run_forward_tripod.py
     ;;
+  planar|planar-tripod|walk)
+    exec "$PY" -u run_planar_tripod.py
+    ;;
   calibrate|stand)
     exec "$PY" foot_kinematics.py
     ;;
@@ -65,8 +68,9 @@ report_flatness(m, pose, bz)
     exec "$PY" tune_pose.py "$@"
     ;;
   *)
-    echo "用法: $0 [locomotion|forward|calibrate|prone|export|validate|build|tune|rl|rl-view|rl-eval|rl-arena]"
+    echo "用法: $0 [locomotion|planar|forward|calibrate|prone|export|validate|build|tune|rl|rl-view|rl-eval|rl-arena]"
     echo "  locomotion  前进/后退/转弯（默认）"
+    echo "  planar      平面三角步态（足底全程平行地面、抬脚行走，I/K/J/L 控制）"
     echo "  forward     仅前进三角步态"
     echo "  calibrate   标定站立姿态"
     echo "  prone       标定失能趴地姿态（足底贴地）"
@@ -77,7 +81,7 @@ report_flatness(m, pose, bz)
     echo "  rl          平地行走 PPO 训练（例: bash run.sh rl --steps 500000 --device auto）"
     echo "  rl-view     MuJoCo 3D 窗口看规则步态（无需训练模型）"
     echo "  rl-eval     MuJoCo 3D 窗口看 PPO 策略行走"
-    echo "  rl-arena    十几只机器人同屏可视化 RL + GPU（例: bash run.sh rl-arena --n-robots 12）"
+    echo "  rl-arena    30 只机器人同屏可视化 RL（例: bash run.sh rl-arena --steps 500000）"
     exit 1
     ;;
 esac

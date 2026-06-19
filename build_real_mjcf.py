@@ -174,9 +174,16 @@ def _patch_sim_xml(path: str) -> None:
         xml = xml.replace("</mujoco>", "\n".join(lines) + "\n</mujoco>")
 
     xml = _patch_foot_contact(xml)
+    xml = _patch_imu(xml)
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(xml)
+
+
+def _patch_imu(xml: str) -> str:
+    from imu_sensor import patch_imu_xml
+
+    return patch_imu_xml(xml)
 
 
 def _patch_foot_contact(xml: str) -> str:

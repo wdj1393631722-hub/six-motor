@@ -22,6 +22,7 @@ from ctrl_smoother import CtrlSmoother
 from foot_kinematics import load_stand_pose, resolve_post_enable_stand
 from foot_stance_lock import blend_stance_ctrl_targets, damp_leg_joint_velocities
 from gait import create_forward_tripod_gait
+from imu_sensor import ImuBinding, imu_obs_vector
 from rl_posture import sync_gait_stand
 from rl_reward import MAX_SPEED_VX_MPS, TRACK_VX_MPS, compute_walk_reward
 from robot_limits import all_joint_names, clamp_joint_targets
@@ -117,9 +118,16 @@ class HexapodFlatWalkEnv(gym.Env):
         self.gait.use_physics_gait = True
         sync_gait_stand(self.gait, self.stand_pose, self.body_z)
 
+        self._base_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, "base_link"
+        )
+        self._imu = ImuBinding(
+            self.model, root_qposadr=0, root_dofadr=0, base_body_id=self._base_id
+        )
+
         n_j = len(self.joint_names)
-        # obs: height_err, roll, pitch, v_body(3), wz, q_rel(18), qd(18), phase_sin, phase_cos
-        obs_dim = 1 + 2 + 3 + 1 + n_j + n_j + 2
+        # obs: height_err, imu(8), v_body(3), q_rel(18), qd(18), phase(2)
+        obs_dim = 1 + 8 + 3 + n_j + n_j + 2
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
@@ -168,13 +176,10 @@ class HexapodFlatWalkEnv(gym.Env):
         return 0.0
 
     def _get_obs(self) -> np.ndarray:
-        roll, pitch = _quat_rp(self.data.qpos[3:7])
-        base_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, "base_link"
-        )
+        imu = self._imu.read(self.data)
+        base_id = self._base_id
         R = self.data.xmat[base_id].reshape(3, 3)
         v_body = R.T @ self.data.qvel[0:3]
-        wz = float(self.data.qvel[5])
 
         q = self.data.qpos[self._j_qposadr].astype(np.float64)
         q_stand = np.array(
@@ -186,9 +191,8 @@ class HexapodFlatWalkEnv(gym.Env):
         u = self._gait_phase_u()
         parts = [
             np.array([self.data.qpos[2] - self.body_z], dtype=np.float32),
-            np.array([roll, pitch], dtype=np.float32),
+            imu_obs_vector(imu),
             v_body.astype(np.float32),
-            np.array([wz], dtype=np.float32),
             q_rel.astype(np.float32),
             (qd * 0.05).astype(np.float32),
             np.array([math.sin(2 * math.pi * u), math.cos(2 * math.pi * u)], dtype=np.float32),
@@ -207,28 +211,28 @@ class HexapodFlatWalkEnv(gym.Env):
     def _compute_reward(
         self, action: np.ndarray, q_ref: Dict[str, float]
     ) -> Tuple[float, Dict[str, float]]:
-        base_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, "base_link"
-        )
+        imu = self._imu.read(self.data)
+        base_id = self._base_id
         R = self.data.xmat[base_id].reshape(3, 3)
         v_body = R.T @ self.data.qvel[0:3]
         v_forward = float(v_body[1])
         v_lateral = float(v_body[0])
-        wz = float(self.data.qvel[5])
+        wz = float(imu.gyro[2])
         z_err = float(self.data.qpos[2] - self.body_z)
 
-        roll, pitch = _quat_rp(self.data.qpos[3:7])
         reward, rinfo = compute_walk_reward(
             v_forward,
             v_lateral,
             wz,
             z_err,
-            roll,
-            pitch,
+            imu.roll,
+            imu.pitch,
             action,
             self._last_action,
             mode=self.reward_mode,
             vx_target=TRACK_VX_MPS,
+            gyro=imu.gyro,
+            acc=imu.acc,
         )
         info = {
             **rinfo,
@@ -317,6 +321,8 @@ class HexapodFlatWalkEnv(gym.Env):
                 self.model,
                 self.data,
                 body_z_target=self.gait.p.body_height,
+                roll_hold=0.0,
+                pitch_hold=0.0,
             )
             damp_leg_joint_velocities(self.model, self.data)
 

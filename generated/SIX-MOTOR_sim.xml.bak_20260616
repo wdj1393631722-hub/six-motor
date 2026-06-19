@@ -45,7 +45,7 @@
 <inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668"/>
       <joint name="root" type="free"/>
       <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="base_link"/>
-      <body name="leg6_coxa" pos="-0.1 0.16209 0" quat="0.995424 0 0 0.095554">
+      <body name="leg6_coxa" pos="-0.1 0.16209 0">
         <inertial pos="0.000746691 -5.70006e-05 0.0740807" quat="0.752168 0.616221 0.148684 0.180025" mass="1.74343" diaginertia="0.00337991 0.00189482 0.00179759"/>
         <joint name="leg6_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
         <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_coxa"/>
@@ -62,7 +62,7 @@
           </body>
         </body>
       </body>
-      <body name="leg5_coxa" pos="-0.16 0.002094 0" quat="0.998687 0 0 0.051228">
+      <body name="leg5_coxa" pos="-0.16 0.002094 0">
         <inertial pos="0.000368231 0.000664472 0.075136" quat="0.5376 0.436288 0.455691 0.55945" mass="1.71861" diaginertia="0.00337593 0.0018871 0.00179343"/>
         <joint name="leg5_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
         <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_coxa"/>
@@ -79,7 +79,7 @@
           </body>
         </body>
       </body>
-      <body name="leg1_coxa" pos="0.1 0.16209 -0.0015" quat="0.980186 0 0 0.198081">
+      <body name="leg1_coxa" pos="0.1 0.16209 -0.0015">
         <inertial pos="0.000186805 -0.000736327 0.0766362" quat="0.71823 0.584273 -0.237691 -0.293724" mass="1.71861" diaginertia="0.00337594 0.0018871 0.00179344"/>
         <joint name="leg1_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
         <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_coxa"/>
@@ -96,7 +96,7 @@
           </body>
         </body>
       </body>
-      <body name="leg3_coxa" pos="0.1 -0.15791 0" quat="0.981710 0 0 -0.190381">
+      <body name="leg3_coxa" pos="0.1 -0.15791 0">
         <inertial pos="-0.00100052 0.000217348 0.0751941" quat="0.592385 0.729219 0.265249 0.216709" mass="1.72944" diaginertia="0.0033761 0.00188749 0.00179385"/>
         <joint name="leg3_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
         <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_coxa"/>
@@ -113,7 +113,7 @@
           </body>
         </body>
       </body>
-      <body name="leg4_coxa" pos="-0.1 -0.15791 0" quat="0.963383 0 0 0.268129">
+      <body name="leg4_coxa" pos="-0.1 -0.15791 0">
         <inertial pos="0.000231519 0.00099404 0.0752237" quat="0.334174 0.270602 0.569783 0.700321" mass="1.72944" diaginertia="0.0033761 0.00188749 0.00179386"/>
         <joint name="leg4_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
         <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_coxa"/>
@@ -130,7 +130,7 @@
           </body>
         </body>
       </body>
-      <body name="leg2_coxa" pos="0.16 0.002094 0" quat="0.981710 0 0 -0.190381">
+      <body name="leg2_coxa" pos="0.16 0.002094 0">
         <inertial pos="-0.000316663 -0.000690529 0.0751361" quat="0.418646 0.515932 0.579488 0.471957" mass="1.71861" diaginertia="0.00337594 0.00188711 0.00179343"/>
         <joint name="leg2_coxa_joint" pos="0 0 0" axis="0 0 1" range="-0.8 0.8" actuatorfrcrange="-100 100"/>
         <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_coxa"/>

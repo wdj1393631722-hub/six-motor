@@ -2,10 +2,13 @@
 """
 同屏多机器人可视化强化学习 — GPU 训练 + MuJoCo 3D 阵列窗口。
 
+基于 v2.0 规则关节三角步态 + RL 残差修正；默认 30 只机器人同屏训练。
+
 用法:
-  python train_rl_arena.py                    # 12 机器人同屏训练
-  python train_rl_arena.py --n-robots 16      # 16 机器人
-  python train_rl_arena.py --eval             # 仅可视化已训练策略
+  python train_rl_arena.py                    # 30 机器人同屏训练（MuJoCo 可见）
+  python train_rl_arena.py --n-robots 30      # 显式指定 30 机器人
+  python train_rl_arena.py --smoke            # 无模型演示（验证窗口与场景）
+  python train_rl_arena.py --eval             # 可视化已训练策略
 """
 from __future__ import annotations
 
@@ -47,6 +50,50 @@ def _resolve_device(requested: str) -> str:
         print("警告: 未检测到 CUDA，回退 CPU")
         return "cpu"
     return requested
+
+
+class _TerminalProgressCallback:
+    """每轮 rollout 在终端打印一行进度（比 tqdm 更不易被 MuJoCo 日志冲掉）。"""
+
+    def __init__(self, total_steps: int):
+        from stable_baselines3.common.callbacks import BaseCallback
+
+        class _Cb(BaseCallback):
+            def __init__(self, total_):
+                super().__init__()
+                self._total = int(total_)
+                self._t0 = time.time()
+                self._iter = 0
+
+            def _on_step(self) -> bool:
+                return True
+
+            def _on_rollout_end(self) -> None:
+                import numpy as np
+
+                self._iter += 1
+                done = int(self.num_timesteps)
+                pct = 100.0 * done / max(self._total, 1)
+                elapsed = max(time.time() - self._t0, 1e-6)
+                it_s = done / elapsed
+                rew = None
+                if self.model.ep_info_buffer:
+                    try:
+                        rew = float(np.mean([ep["r"] for ep in self.model.ep_info_buffer]))
+                    except Exception:
+                        rew = None
+                rew_s = f" | 平均奖励 {rew:+.2f}" if rew is not None else ""
+                print(
+                    f"[训练] {done}/{self._total} ({pct:.1f}%)"
+                    f" | {it_s:.0f} step/s | 第 {self._iter} 轮{rew_s}",
+                    flush=True,
+                )
+
+        self._Cb = _Cb
+        self._total = total_steps
+
+    def make(self):
+        return self._Cb(self._total)
 
 
 class _ArenaWindowCallback:
@@ -96,22 +143,31 @@ def train(args: argparse.Namespace) -> None:
         render_stride=args.render_stride,
         reward_mode=args.reward_mode,
         vx_cmd=args.vx_cmd,
+        spawn_span=args.spawn_span,
+        min_spawn_dist=args.min_spawn_dist,
     )
     env = HexapodMultiVecEnv(arena)
 
     import torch
 
     print("══ 多机器人可视化 RL ══")
+    print(f"  基准步态: 规则关节三角步态 v2.0 + RL 残差 (scale={args.residual_scale})")
     print(f"  奖励模式: {args.reward_mode}" + (
-        "（越快奖励越高）" if args.reward_mode == "max_speed" else ""
+        "（越快奖励越高）" if args.reward_mode == "max_speed" else "（跟踪规则步态速度）"
     ))
     if device.startswith("cuda") and torch.cuda.is_available():
         print(f"  GPU 策略网络: {torch.cuda.get_device_name(0)}")
     print(f"  同屏机器人数: {args.n_robots}")
+    print(f"  出生范围: ±{arena.spawn_span:.1f} m，最小间距 {arena.min_spawn_dist:.2f} m")
     print(f"  场景文件: {arena.model_path}")
     print("  MuJoCo 窗口会实时显示所有机器人行走（同位置软重生，减少闪烁）")
     print("  关闭 MuJoCo 窗口可结束训练")
     print(f"  TensorBoard: tensorboard --logdir {log_dir}")
+    print("  终端进度: 每轮 rollout 打印 [训练] 已完成步数/总步数 …")
+
+    print("[arena] 初始化场景并打开 MuJoCo 窗口…", flush=True)
+    env.reset()
+    arena.render()
 
     model = PPO(
         "MlpPolicy",
@@ -140,6 +196,7 @@ def train(args: argparse.Namespace) -> None:
                 save_path=ckpt_dir,
                 name_prefix="ppo_arena",
             ),
+            _TerminalProgressCallback(args.steps).make(),
             _ArenaWindowCallback(arena).make(),
         ]
     )
@@ -181,9 +238,12 @@ def evaluate(args: argparse.Namespace) -> None:
         render_stride=args.render_stride,
         reward_mode=args.reward_mode,
         vx_cmd=args.vx_cmd,
+        spawn_span=args.spawn_span,
+        min_spawn_dist=args.min_spawn_dist,
     )
     env = HexapodMultiVecEnv(arena)
     obs = env.reset()
+    arena.render()
 
     print(f"加载: {model_path}")
     print(f"同屏 {args.n_robots} 只机器人 — 关闭窗口结束")
@@ -194,7 +254,7 @@ def evaluate(args: argparse.Namespace) -> None:
     try:
         while arena._viewer is None or arena._viewer.is_running():
             action, _ = model.predict(obs, deterministic=not stochastic)
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _ = env.step(action)
             time.sleep(arena.control_dt)
     except KeyboardInterrupt:
         pass
@@ -233,8 +293,11 @@ def smoke(args: argparse.Namespace) -> None:
         render_stride=args.render_stride,
         reward_mode=args.reward_mode,
         vx_cmd=args.vx_cmd,
+        spawn_span=args.spawn_span,
+        min_spawn_dist=args.min_spawn_dist,
     )
     obs, _ = arena.reset()
+    arena.render()
     print(f"场景: {arena.model_path} | 奖励: {args.reward_mode}")
     print(f"观测 batch: {obs.shape} — 关闭窗口结束")
     rng = np.random.default_rng(args.seed)
@@ -265,17 +328,29 @@ def smoke(args: argparse.Namespace) -> None:
 
 def main():
     p = argparse.ArgumentParser(description="同屏多机器人可视化 RL")
-    p.add_argument("--n-robots", type=int, default=12, help="同屏机器人数量")
-    p.add_argument("--spacing", type=float, default=1.05, help="机器人间距(m)")
+    p.add_argument("--n-robots", type=int, default=30, help="同屏机器人数量（默认 30）")
+    p.add_argument("--spacing", type=float, default=1.5, help="MJCF 网格间距(m)")
+    p.add_argument(
+        "--spawn-span",
+        type=float,
+        default=None,
+        help="随机出生范围 ±m（默认随 n-robots 自动）",
+    )
+    p.add_argument(
+        "--min-spawn-dist",
+        type=float,
+        default=None,
+        help="机器人最小出生间距 m（默认随 n-robots 自动）",
+    )
     p.add_argument("--steps", type=int, default=500_000, help="总环境步数")
     p.add_argument("--max-steps", type=int, default=500)
     p.add_argument("--residual-scale", type=float, default=0.08)
     p.add_argument(
         "--reward-mode",
         type=str,
-        default="max_speed",
+        default="track",
         choices=["track", "max_speed"],
-        help="track=跟踪固定速度; max_speed=尽量跑快",
+        help="track=跟踪规则步态速度; max_speed=尽量跑快",
     )
     p.add_argument(
         "--vx-cmd",
@@ -306,8 +381,8 @@ def main():
     p.add_argument(
         "--render-stride",
         type=int,
-        default=2,
-        help="每 N 步刷新一次 3D 画面（默认 2，越大越省资源）",
+        default=4,
+        help="每 N 步刷新一次 3D 画面（默认 4，30 机建议 4~8）",
     )
     args = p.parse_args()
 

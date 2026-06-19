@@ -32,14 +32,15 @@
 
     <visual>
     <quality shadowsize="2048" />
-    <map fogstart="4" fogend="35" zfar="40" />
+    <map fogstart="4" fogend="40" zfar="45" />
   </visual>
   <worldbody>
         <light name="sun" pos="0 0 4" dir="0 0 -1" diffuse="0.95 0.95 0.92" castshadow="true" />
     <light name="fill" pos="2 2 2.5" dir="-0.6 -0.6 -1" diffuse="0.4 0.42 0.45" />
-    <geom name="floor" type="plane" size="25 25 0.05" pos="0 0 0" material="mat_ground" friction="2.0 0.05 0.0001" solref="0.02 1" solimp="0.9 0.95 0.001" condim="3" contype="1" conaffinity="1" />
-<body name="r0_r0_base_link" pos="1.2548 -4.2749 0">
-      <inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
+    <geom name="floor" type="plane" size="18 18 0.05" pos="0 0 0" material="mat_ground" friction="2.0 0.05 0.0001" solref="0.004 1.2" solimp="0.92 0.98 0.001" condim="3" contype="1" conaffinity="1" />
+<body name="r0_r0_base_link" pos="1.6731 -5.6999 0">
+            <site name="r0_imu_site" pos="0.0000 0.0000 0.0420" size="0.010" rgba="0.95 0.25 0.15 0.85" />
+<inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
       <joint name="r0_root" type="free" />
       <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="base_link" />
       <body name="r0_leg6_coxa" pos="-0.1 0.16209 0">
@@ -54,7 +55,7 @@
             <inertial pos="-0.0711902 0.0379258 -0.103035" quat="0.962245 0.164358 0.0428219 0.212691" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r0_leg6_tibia_joint" pos="0 0 0" axis="-0.89089 -0.45422 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_tibia" />
-            <geom name="r0_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r0_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -71,7 +72,7 @@
             <inertial pos="-0.0581764 -0.0486496 -0.106637" quat="0.698208 0.0960905 0.104111 0.701736" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r0_leg5_tibia_joint" pos="0 0 0" axis="0.041461 -0.99914 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_tibia" />
-            <geom name="r0_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r0_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -88,7 +89,7 @@
             <inertial pos="0.00666668 0.0728465 -0.108497" quat="0.391431 -0.0452871 -0.117477 0.911554" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r0_leg1_tibia_joint" pos="0 0 0" axis="-0.714586 0.699548 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_tibia" />
-            <geom name="r0_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r0_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -105,7 +106,7 @@
             <inertial pos="0.0567567 0.00429205 -0.117826" quat="0.945322 -0.0213306 -0.00838611 0.325332" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r0_leg3_tibia_joint" pos="0 0 0" axis="0.765245 0.643739 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_tibia" />
-            <geom name="r0_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r0_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -122,7 +123,7 @@
             <inertial pos="0.00629495 -0.0543951 -0.118845" quat="0.446298 0.00261022 0.00611904 0.89486" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r0_leg4_tibia_joint" pos="0 0 0" axis="0.630346 -0.776314 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_tibia" />
-            <geom name="r0_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r0_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -139,13 +140,14 @@
             <inertial pos="0.000577207 0.0465849 -0.122279" quat="0.675139 0.0585549 0.0681138 0.732202" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r0_leg2_tibia_joint" pos="0 0 0" axis="-0.11728 0.993099 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_tibia" />
-            <geom name="r0_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r0_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
       </body>
-    </body><body name="r1_r1_base_link" pos="-2.0247 -2.4911 0">
-      <inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
+    </body><body name="r1_r1_base_link" pos="-2.6996 -3.3215 0">
+            <site name="r1_imu_site" pos="0.0000 0.0000 0.0420" size="0.010" rgba="0.95 0.25 0.15 0.85" />
+<inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
       <joint name="r1_root" type="free" />
       <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="base_link" />
       <body name="r1_leg6_coxa" pos="-0.1 0.16209 0">
@@ -160,7 +162,7 @@
             <inertial pos="-0.0711902 0.0379258 -0.103035" quat="0.962245 0.164358 0.0428219 0.212691" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r1_leg6_tibia_joint" pos="0 0 0" axis="-0.89089 -0.45422 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_tibia" />
-            <geom name="r1_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r1_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -177,7 +179,7 @@
             <inertial pos="-0.0581764 -0.0486496 -0.106637" quat="0.698208 0.0960905 0.104111 0.701736" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r1_leg5_tibia_joint" pos="0 0 0" axis="0.041461 -0.99914 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_tibia" />
-            <geom name="r1_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r1_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -194,7 +196,7 @@
             <inertial pos="0.00666668 0.0728465 -0.108497" quat="0.391431 -0.0452871 -0.117477 0.911554" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r1_leg1_tibia_joint" pos="0 0 0" axis="-0.714586 0.699548 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_tibia" />
-            <geom name="r1_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r1_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -211,7 +213,7 @@
             <inertial pos="0.0567567 0.00429205 -0.117826" quat="0.945322 -0.0213306 -0.00838611 0.325332" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r1_leg3_tibia_joint" pos="0 0 0" axis="0.765245 0.643739 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_tibia" />
-            <geom name="r1_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r1_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -228,7 +230,7 @@
             <inertial pos="0.00629495 -0.0543951 -0.118845" quat="0.446298 0.00261022 0.00611904 0.89486" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r1_leg4_tibia_joint" pos="0 0 0" axis="0.630346 -0.776314 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_tibia" />
-            <geom name="r1_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r1_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -245,13 +247,14 @@
             <inertial pos="0.000577207 0.0465849 -0.122279" quat="0.675139 0.0585549 0.0681138 0.732202" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r1_leg2_tibia_joint" pos="0 0 0" axis="-0.11728 0.993099 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_tibia" />
-            <geom name="r1_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r1_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
       </body>
-    </body><body name="r2_r2_base_link" pos="2.1282 1.5903 0">
-      <inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
+    </body><body name="r2_r2_base_link" pos="2.8377 2.1204 0">
+            <site name="r2_imu_site" pos="0.0000 0.0000 0.0420" size="0.010" rgba="0.95 0.25 0.15 0.85" />
+<inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
       <joint name="r2_root" type="free" />
       <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="base_link" />
       <body name="r2_leg6_coxa" pos="-0.1 0.16209 0">
@@ -266,7 +269,7 @@
             <inertial pos="-0.0711902 0.0379258 -0.103035" quat="0.962245 0.164358 0.0428219 0.212691" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r2_leg6_tibia_joint" pos="0 0 0" axis="-0.89089 -0.45422 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_tibia" />
-            <geom name="r2_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r2_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -283,7 +286,7 @@
             <inertial pos="-0.0581764 -0.0486496 -0.106637" quat="0.698208 0.0960905 0.104111 0.701736" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r2_leg5_tibia_joint" pos="0 0 0" axis="0.041461 -0.99914 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_tibia" />
-            <geom name="r2_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r2_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -300,7 +303,7 @@
             <inertial pos="0.00666668 0.0728465 -0.108497" quat="0.391431 -0.0452871 -0.117477 0.911554" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r2_leg1_tibia_joint" pos="0 0 0" axis="-0.714586 0.699548 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_tibia" />
-            <geom name="r2_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r2_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -317,7 +320,7 @@
             <inertial pos="0.0567567 0.00429205 -0.117826" quat="0.945322 -0.0213306 -0.00838611 0.325332" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r2_leg3_tibia_joint" pos="0 0 0" axis="0.765245 0.643739 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_tibia" />
-            <geom name="r2_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r2_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -334,7 +337,7 @@
             <inertial pos="0.00629495 -0.0543951 -0.118845" quat="0.446298 0.00261022 0.00611904 0.89486" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r2_leg4_tibia_joint" pos="0 0 0" axis="0.630346 -0.776314 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_tibia" />
-            <geom name="r2_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r2_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -351,13 +354,14 @@
             <inertial pos="0.000577207 0.0465849 -0.122279" quat="0.675139 0.0585549 0.0681138 0.732202" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r2_leg2_tibia_joint" pos="0 0 0" axis="-0.11728 0.993099 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_tibia" />
-            <geom name="r2_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r2_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
       </body>
-    </body><body name="r3_r3_base_link" pos="3.5296 -3.7176 0">
-      <inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
+    </body><body name="r3_r3_base_link" pos="4.7062 -4.9567 0">
+            <site name="r3_imu_site" pos="0.0000 0.0000 0.0420" size="0.010" rgba="0.95 0.25 0.15 0.85" />
+<inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668" />
       <joint name="r3_root" type="free" />
       <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="base_link" />
       <body name="r3_leg6_coxa" pos="-0.1 0.16209 0">
@@ -372,7 +376,7 @@
             <inertial pos="-0.0711902 0.0379258 -0.103035" quat="0.962245 0.164358 0.0428219 0.212691" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r3_leg6_tibia_joint" pos="0 0 0" axis="-0.89089 -0.45422 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg6_tibia" />
-            <geom name="r3_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r3_leg6_foot_pad" type="box" pos="-0.050251 0.098546 -0.185098" quat="0.078324 -0.891679 -0.445840 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -389,7 +393,7 @@
             <inertial pos="-0.0581764 -0.0486496 -0.106637" quat="0.698208 0.0960905 0.104111 0.701736" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r3_leg5_tibia_joint" pos="0 0 0" axis="0.041461 -0.99914 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg5_tibia" />
-            <geom name="r3_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r3_leg5_foot_pad" type="box" pos="-0.099802 -0.004162 -0.191102" quat="0.049814 0.000000 -0.998759 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -406,7 +410,7 @@
             <inertial pos="0.00666668 0.0728465 -0.108497" quat="0.391431 -0.0452871 -0.117477 0.911554" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r3_leg1_tibia_joint" pos="0 0 0" axis="-0.714586 0.699548 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg1_tibia" />
-            <geom name="r3_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r3_leg1_foot_pad" type="box" pos="0.065574 0.066989 -0.194185" quat="0.035289 -0.706666 0.706666 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -423,7 +427,7 @@
             <inertial pos="0.0567567 0.00429205 -0.117826" quat="0.945322 -0.0213306 -0.00838611 0.325332" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r3_leg3_tibia_joint" pos="0 0 0" axis="0.765245 0.643739 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg3_tibia" />
-            <geom name="r3_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r3_leg3_foot_pad" type="box" pos="0.062005 0.057541 -0.201359" quat="0.071234 -0.771991 -0.631629 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -440,7 +444,7 @@
             <inertial pos="0.00629495 -0.0543951 -0.118845" quat="0.446298 0.00261022 0.00611904 0.89486" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r3_leg4_tibia_joint" pos="0 0 0" axis="0.630346 -0.776314 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg4_tibia" />
-            <geom name="r3_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r3_leg4_foot_pad" type="box" pos="-0.034984 -0.028428 -0.210867" quat="0.085071 -0.643601 0.760619 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
@@ -457,10 +461,10 @@
             <inertial pos="0.000577207 0.0465849 -0.122279" quat="0.675139 0.0585549 0.0681138 0.732202" mass="0.369769" diaginertia="0.00249706 0.0024283 0.000477715" />
             <joint name="r3_leg2_tibia_joint" pos="0 0 0" axis="-0.11728 0.993099 0" range="0 2.2" actuatorfrcrange="-100 100" />
             <geom contype="0" conaffinity="0" type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="leg2_tibia" />
-            <geom name="r3_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.02 1" condim="3" contype="2" conaffinity="1" />
+            <geom name="r3_leg2_foot_pad" type="box" pos="-0.058638 0.078150 -0.195335" quat="0.184636 0.108533 -0.976796 0.000000" size="0.028 0.022 0.005" rgba="0.75 0.78 0.82 0.35" friction="3.5 0.12 0.0001" solref="0.004 1.2" condim="3" contype="2" conaffinity="1" />
 
           </body>
         </body>
       </body>
     </body></worldbody>
-  <actuator><position name="r0_leg6_coxa_joint_act" joint="r0_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg6_femur_joint_act" joint="r0_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg6_tibia_joint_act" joint="r0_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg5_coxa_joint_act" joint="r0_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg5_femur_joint_act" joint="r0_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg5_tibia_joint_act" joint="r0_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg1_coxa_joint_act" joint="r0_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg1_femur_joint_act" joint="r0_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg1_tibia_joint_act" joint="r0_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg3_coxa_joint_act" joint="r0_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg3_femur_joint_act" joint="r0_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg3_tibia_joint_act" joint="r0_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg4_coxa_joint_act" joint="r0_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg4_femur_joint_act" joint="r0_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg4_tibia_joint_act" joint="r0_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg2_coxa_joint_act" joint="r0_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg2_femur_joint_act" joint="r0_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg2_tibia_joint_act" joint="r0_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg6_coxa_joint_act" joint="r1_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg6_femur_joint_act" joint="r1_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg6_tibia_joint_act" joint="r1_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg5_coxa_joint_act" joint="r1_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg5_femur_joint_act" joint="r1_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg5_tibia_joint_act" joint="r1_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg1_coxa_joint_act" joint="r1_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg1_femur_joint_act" joint="r1_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg1_tibia_joint_act" joint="r1_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg3_coxa_joint_act" joint="r1_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg3_femur_joint_act" joint="r1_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg3_tibia_joint_act" joint="r1_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg4_coxa_joint_act" joint="r1_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg4_femur_joint_act" joint="r1_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg4_tibia_joint_act" joint="r1_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg2_coxa_joint_act" joint="r1_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg2_femur_joint_act" joint="r1_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg2_tibia_joint_act" joint="r1_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg6_coxa_joint_act" joint="r2_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg6_femur_joint_act" joint="r2_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg6_tibia_joint_act" joint="r2_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg5_coxa_joint_act" joint="r2_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg5_femur_joint_act" joint="r2_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg5_tibia_joint_act" joint="r2_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg1_coxa_joint_act" joint="r2_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg1_femur_joint_act" joint="r2_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg1_tibia_joint_act" joint="r2_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg3_coxa_joint_act" joint="r2_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg3_femur_joint_act" joint="r2_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg3_tibia_joint_act" joint="r2_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg4_coxa_joint_act" joint="r2_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg4_femur_joint_act" joint="r2_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg4_tibia_joint_act" joint="r2_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg2_coxa_joint_act" joint="r2_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg2_femur_joint_act" joint="r2_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg2_tibia_joint_act" joint="r2_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg6_coxa_joint_act" joint="r3_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg6_femur_joint_act" joint="r3_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg6_tibia_joint_act" joint="r3_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg5_coxa_joint_act" joint="r3_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg5_femur_joint_act" joint="r3_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg5_tibia_joint_act" joint="r3_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg1_coxa_joint_act" joint="r3_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg1_femur_joint_act" joint="r3_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg1_tibia_joint_act" joint="r3_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg3_coxa_joint_act" joint="r3_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg3_femur_joint_act" joint="r3_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg3_tibia_joint_act" joint="r3_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg4_coxa_joint_act" joint="r3_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg4_femur_joint_act" joint="r3_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg4_tibia_joint_act" joint="r3_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg2_coxa_joint_act" joint="r3_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg2_femur_joint_act" joint="r3_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg2_tibia_joint_act" joint="r3_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /></actuator></mujoco>
+  <actuator><position name="r0_leg6_coxa_joint_act" joint="r0_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg6_femur_joint_act" joint="r0_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg6_tibia_joint_act" joint="r0_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg5_coxa_joint_act" joint="r0_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg5_femur_joint_act" joint="r0_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg5_tibia_joint_act" joint="r0_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg1_coxa_joint_act" joint="r0_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg1_femur_joint_act" joint="r0_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg1_tibia_joint_act" joint="r0_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg3_coxa_joint_act" joint="r0_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg3_femur_joint_act" joint="r0_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg3_tibia_joint_act" joint="r0_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg4_coxa_joint_act" joint="r0_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg4_femur_joint_act" joint="r0_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg4_tibia_joint_act" joint="r0_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r0_leg2_coxa_joint_act" joint="r0_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg2_femur_joint_act" joint="r0_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r0_leg2_tibia_joint_act" joint="r0_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg6_coxa_joint_act" joint="r1_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg6_femur_joint_act" joint="r1_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg6_tibia_joint_act" joint="r1_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg5_coxa_joint_act" joint="r1_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg5_femur_joint_act" joint="r1_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg5_tibia_joint_act" joint="r1_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg1_coxa_joint_act" joint="r1_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg1_femur_joint_act" joint="r1_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg1_tibia_joint_act" joint="r1_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg3_coxa_joint_act" joint="r1_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg3_femur_joint_act" joint="r1_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg3_tibia_joint_act" joint="r1_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg4_coxa_joint_act" joint="r1_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg4_femur_joint_act" joint="r1_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg4_tibia_joint_act" joint="r1_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r1_leg2_coxa_joint_act" joint="r1_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg2_femur_joint_act" joint="r1_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r1_leg2_tibia_joint_act" joint="r1_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg6_coxa_joint_act" joint="r2_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg6_femur_joint_act" joint="r2_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg6_tibia_joint_act" joint="r2_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg5_coxa_joint_act" joint="r2_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg5_femur_joint_act" joint="r2_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg5_tibia_joint_act" joint="r2_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg1_coxa_joint_act" joint="r2_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg1_femur_joint_act" joint="r2_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg1_tibia_joint_act" joint="r2_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg3_coxa_joint_act" joint="r2_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg3_femur_joint_act" joint="r2_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg3_tibia_joint_act" joint="r2_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg4_coxa_joint_act" joint="r2_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg4_femur_joint_act" joint="r2_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg4_tibia_joint_act" joint="r2_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r2_leg2_coxa_joint_act" joint="r2_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg2_femur_joint_act" joint="r2_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r2_leg2_tibia_joint_act" joint="r2_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg6_coxa_joint_act" joint="r3_leg6_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg6_femur_joint_act" joint="r3_leg6_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg6_tibia_joint_act" joint="r3_leg6_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg5_coxa_joint_act" joint="r3_leg5_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg5_femur_joint_act" joint="r3_leg5_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg5_tibia_joint_act" joint="r3_leg5_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg1_coxa_joint_act" joint="r3_leg1_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg1_femur_joint_act" joint="r3_leg1_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg1_tibia_joint_act" joint="r3_leg1_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg3_coxa_joint_act" joint="r3_leg3_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg3_femur_joint_act" joint="r3_leg3_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg3_tibia_joint_act" joint="r3_leg3_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg4_coxa_joint_act" joint="r3_leg4_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg4_femur_joint_act" joint="r3_leg4_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg4_tibia_joint_act" joint="r3_leg4_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /><position name="r3_leg2_coxa_joint_act" joint="r3_leg2_coxa_joint" kp="280" kv="12" ctrlrange="-0.8 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg2_femur_joint_act" joint="r3_leg2_femur_joint" kp="280" kv="12" ctrlrange="-1.4 0.8" forcelimited="true" forcerange="-100 100" /><position name="r3_leg2_tibia_joint_act" joint="r3_leg2_tibia_joint" kp="280" kv="12" ctrlrange="0.0 2.2" forcelimited="true" forcerange="-100 100" /></actuator><sensor><gyro name="r0_imu_gyro" site="r0_imu_site" /><accelerometer name="r0_imu_acc" site="r0_imu_site" /><gyro name="r1_imu_gyro" site="r1_imu_site" /><accelerometer name="r1_imu_acc" site="r1_imu_site" /><gyro name="r2_imu_gyro" site="r2_imu_site" /><accelerometer name="r2_imu_acc" site="r2_imu_site" /><gyro name="r3_imu_gyro" site="r3_imu_site" /><accelerometer name="r3_imu_acc" site="r3_imu_site" /></sensor></mujoco>

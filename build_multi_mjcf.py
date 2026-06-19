@@ -72,13 +72,25 @@ def random_spawn_positions(
 
 
 def _prefix_tree(elem: ET.Element, prefix: str) -> None:
-    """为 body/joint/geom/actuator 名称加前缀；mesh 资源名保持不变。"""
-    for key in ("name", "joint"):
-        if key in elem.attrib:
-            val = elem.attrib[key]
-            if not val.startswith("r") or "_leg" not in val:
-                if key == "joint" or elem.tag in ("body", "joint", "geom", "actuator"):
-                    elem.attrib[key] = f"{prefix}{val}"
+    """为 body/joint/geom/site/actuator 名称加前缀；mesh 资源名保持不变。"""
+    if elem.tag == "site" and "name" in elem.attrib:
+        val = elem.attrib["name"]
+        if not val.startswith(prefix):
+            elem.attrib["name"] = f"{prefix}{val}"
+    else:
+        for key in ("name", "joint"):
+            if key in elem.attrib:
+                val = elem.attrib[key]
+                if val.startswith(prefix):
+                    continue
+                if not val.startswith("r") or "_leg" not in val:
+                    if key == "joint" or elem.tag in (
+                        "body",
+                        "joint",
+                        "geom",
+                        "actuator",
+                    ):
+                        elem.attrib[key] = f"{prefix}{val}"
     if elem.tag == "geom" and "foot_pad" in elem.attrib.get("name", ""):
         elem.attrib["contype"] = "2"
         elem.attrib["conaffinity"] = "1"
@@ -108,6 +120,7 @@ def build_multi_mjcf(
     root = tree.getroot()
     world = root.find("worldbody")
     actuator_sec = root.find("actuator")
+    sensor_sec = root.find("sensor")
     if world is None or actuator_sec is None:
         raise RuntimeError("XML 结构异常：缺少 worldbody / actuator")
 
@@ -121,9 +134,17 @@ def build_multi_mjcf(
 
     world.remove(base_tpl)
 
+    sensor_tpl: list[ET.Element] = []
+    if sensor_sec is not None:
+        sensor_tpl = [ET.fromstring(ET.tostring(s)) for s in list(sensor_sec)]
+        sensor_sec.clear()
+    else:
+        sensor_sec = ET.SubElement(root, "sensor")
+
+    half = max(22.0, 8.0 + 0.75 * math.sqrt(max(n_robots, 1)))
     floor = world.find(".//geom[@name='floor']")
     if floor is not None:
-        floor.attrib["size"] = "25 25 0.05"
+        floor.attrib["size"] = f"{half:.0f} {half:.0f} 0.05"
         floor.attrib["contype"] = "1"
         floor.attrib["conaffinity"] = "1"
 
@@ -131,13 +152,15 @@ def build_multi_mjcf(
     actuator_sec.clear()
 
     if layout == "scatter":
-        positions = _scatter_xy(n_robots, span=4.5, min_dist=max(spacing, 0.9))
+        scatter_span = max(6.0, spacing * math.sqrt(max(n_robots, 1)) * 1.2)
+        positions = _scatter_xy(
+            n_robots, span=scatter_span, min_dist=max(spacing, 1.1)
+        )
     else:
         positions = _grid_xy(n_robots, spacing)
     for i, (gx, gy) in enumerate(positions):
         prefix = f"r{i}_"
         body = ET.fromstring(ET.tostring(base_tpl))
-        body.attrib["name"] = f"{prefix}base_link"
         body.attrib["pos"] = f"{gx:.4f} {gy:.4f} 0"
         _prefix_tree(body, prefix)
         for j in body.iter("joint"):
@@ -153,13 +176,20 @@ def build_multi_mjcf(
             a.attrib["name"] = f"{prefix}{aname}"
             actuator_sec.append(a)
 
+        for sens in sensor_tpl:
+            s = ET.fromstring(ET.tostring(sens))
+            s.attrib["name"] = f"{prefix}{s.attrib['name']}"
+            if "site" in s.attrib:
+                s.attrib["site"] = f"{prefix}{s.attrib['site']}"
+            sensor_sec.append(s)
+
     root.attrib["model"] = f"SIX-MOTOR_MULTI_{n_robots}"
     visual = root.find("visual")
     if visual is not None:
         map_elem = visual.find("map")
         if map_elem is not None:
-            map_elem.attrib["zfar"] = "40"
-            map_elem.attrib["fogend"] = "35"
+            map_elem.attrib["zfar"] = str(max(45, int(half * 1.8)))
+            map_elem.attrib["fogend"] = str(max(40, int(half * 1.5)))
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     tree.write(out_path, encoding="unicode", xml_declaration=False)

@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""
+独立运行入口：平面三角步态（足底始终平行地面、抬脚行走）。
+
+按键（先点一下 MuJoCo 窗口）：
+  I/↑  前进   K/↓  后退   J/←  左转   L/→  右转   P 停止   B 重置站立
+
+完全自包含：只依赖 MuJoCo、stand_pose_flat.json 与 planar_tripod_gait.py，
+不走 enable_state / IK / physics_gait / stance_lock 等耦合链路。
+"""
+from __future__ import annotations
+
+import json
+import math
+import os
+import sys
+import time
+
+import mujoco
+import mujoco.viewer
+
+# 航向保持（轻量 yaw 闭环）
+YAW_HOLD_KP = 2.5       # 比例增益
+YAW_HOLD_MAX = 0.18     # 修正转向上限 (rad/步态单位)
+
+# 横向保持（轻量 lateral 闭环）：步态本身有约 0.3·前进量 的恒定横向漂移，
+# yaw 闭环看不到这种"平移性侧滑"，必须单独闭环到机身侧向位置才能走直线。
+LAT_HOLD_KP = 2.5       # 比例增益（横向位置误差 m → 侧向速度指令）
+LAT_HOLD_MAX = 0.12     # 侧向修正速度上限（随前进提速放大，否则纠不过来）
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(SCRIPT_DIR, "generated", "SIX-MOTOR_sim.xml")
+STAND_PATH = os.path.join(SCRIPT_DIR, "generated", "stand_pose_flat.json")
+
+sys.path.insert(0, SCRIPT_DIR)
+from planar_tripod_gait import PlanarTripodGait, TRIPOD_A, TRIPOD_B
+from viewer_controls import CONTROL_HELP, VelocityCommand, make_key_handler
+
+# 行走 PD 增益：折中刚度，抓地实、下沉小，落足顺
+WALK_KP = 200.0
+WALK_KV = 15.0
+
+
+def load_stand():
+    with open(STAND_PATH, encoding="utf-8") as f:
+        d = json.load(f)
+    return d["joints"], float(d["body_height"])
+
+
+def set_gains(model, kp, kv):
+    model.actuator_gainprm[:, 0] = kp
+    model.actuator_biasprm[:, 1] = -kp
+    model.actuator_biasprm[:, 2] = -kv
+
+
+def actuator_id(model, jname):
+    return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"{jname}_act")
+
+
+def joint_qadr(model, jname):
+    jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, jname)
+    return model.jnt_qposadr[jid]
+
+
+def apply_ctrl(model, data, targets):
+    for jname, angle in targets.items():
+        aid = actuator_id(model, jname)
+        if aid >= 0:
+            data.ctrl[aid] = float(angle)
+
+
+def body_yaw(data):
+    qw, qx, qy, qz = data.qpos[3:7]
+    return math.atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
+
+
+def wrap_pi(a):
+    while a > math.pi:
+        a -= 2.0 * math.pi
+    while a < -math.pi:
+        a += 2.0 * math.pi
+    return a
+
+
+def reset_standing(model, data, stand_pose, body_z):
+    mujoco.mj_resetData(model, data)
+    data.qpos[0:3] = [0.0, 0.0, float(body_z)]
+    data.qpos[3:7] = [1.0, 0.0, 0.0, 0.0]
+    for jname, angle in stand_pose.items():
+        data.qpos[joint_qadr(model, jname)] = float(angle)
+    data.qvel[:] = 0.0
+    mujoco.mj_forward(model, data)
+    apply_ctrl(model, data, stand_pose)
+    # 物理沉降，让足底自然接触地面
+    for _ in range(int(0.3 / model.opt.timestep)):
+        mujoco.mj_step(model, data)
+
+
+def main():
+    if not os.path.isfile(MODEL_PATH):
+        print("未找到模型，正在生成...")
+        import build_real_mjcf
+
+        build_real_mjcf.main()
+
+    model = mujoco.MjModel.from_xml_path(MODEL_PATH)
+    data = mujoco.MjData(model)
+    stand_pose, body_z = load_stand()
+
+    print("正在标定步态…", flush=True)
+    gait = PlanarTripodGait(
+        model=model,
+        stand_pose=stand_pose,
+        body_height=body_z,
+        gait_mode="linear",    # 足端机身系直线后蹬：无 scrub、快、走得直
+        cycle_time=0.45,       # 加大周期=步幅更大、抬脚更高；linear 模式速度几乎不降反升
+        lift_height=0.090,     # 抬脚更高，步态更自然、过障更稳、不蹭地
+        height_comp_m=0.055,   # 前馈抬升：机身抬高到约 117mm（站立 70mm）
+        max_stride=0.28,       # 单腿单周期最大水平位移（步幅上限）
+    )
+
+    set_gains(model, WALK_KP, WALK_KV)
+    reset_standing(model, data, stand_pose, body_z)
+
+    max_v = 0.85    # 前进指令（直线后蹬模式下实测前进约 0.33 m/s）
+    max_turn = 2.2  # 转向指令（加大→转弯时各腿步幅/coxa摆幅更大，转得更快）
+    cmd = VelocityCommand()
+    yaw_ref = [None]   # 直线行进时锁定的目标航向（用列表以便闭包修改）
+    pos_ref = [None]   # 直线行进起点的机身水平位置（world xy），用于横向保持
+
+    def on_reset():
+        cmd.vx = cmd.vy = cmd.omega = 0.0
+        yaw_ref[0] = None
+        pos_ref[0] = None
+        gait.reset()
+        reset_standing(model, data, stand_pose, body_z)
+
+    key_callback = make_key_handler(
+        cmd, max_v=max_v, max_turn=max_turn, on_reset=on_reset
+    )
+
+    print(f"加载模型: {MODEL_PATH}")
+    print(f"站立机身高度: {body_z*1000:.1f} mm | 三角组 A{TRIPOD_A} B{TRIPOD_B}")
+    print(f"周期 {gait.cycle_time:.1f}s | 抬脚 {gait.lift_height*1000:.0f}mm | 足底全程平行地面")
+    print(CONTROL_HELP)
+    print("提示: 先点一下 MuJoCo 窗口，再按 I/K/J/L 行走。")
+
+    try:
+        with mujoco.viewer.launch_passive(
+            model, data, key_callback=key_callback
+        ) as viewer:
+            viewer.cam.lookat[:] = [0.0, 0.0, 0.10]
+            viewer.cam.distance = 2.0
+            viewer.cam.elevation = -25
+            viewer.cam.azimuth = 135
+            last = time.time()
+            last_label = ""
+            while viewer.is_running():
+                now = time.time()
+                dt = min(max(now - last, model.opt.timestep), 0.04)
+                last = now
+
+                # 前进映射到 +Y（cmd.vx 为前进量）
+                forward = cmd.vx
+                moving_lin = abs(forward) > 1e-6
+                turning = abs(cmd.omega) > 1e-6
+                omega_cmd = cmd.omega
+                lat_cmd = 0.0
+                if moving_lin and not turning:
+                    # 直线前进/后退：锁定初始航向与位置，分别比例反馈纠偏
+                    if yaw_ref[0] is None:
+                        yaw_ref[0] = body_yaw(data)
+                        pos_ref[0] = data.qpos[0:2].copy()
+                    # 航向闭环
+                    err = wrap_pi(yaw_ref[0] - body_yaw(data))
+                    omega_cmd = max(-YAW_HOLD_MAX, min(YAW_HOLD_MAX, YAW_HOLD_KP * err))
+                    # 横向闭环：把位置偏差投影到锁定航向的侧向轴（body +X）。
+                    # 机身 +Y 为前进；yaw 旋转下 body +X 的世界方向 = (cos yaw, sin yaw)。
+                    lat_axis = (math.cos(yaw_ref[0]), math.sin(yaw_ref[0]))
+                    d = data.qpos[0:2] - pos_ref[0]
+                    lat_err = float(d[0] * lat_axis[0] + d[1] * lat_axis[1])
+                    lat_cmd = max(-LAT_HOLD_MAX, min(LAT_HOLD_MAX, -LAT_HOLD_KP * lat_err))
+                elif turning:
+                    # 主动转向：持续更新参考，转完后以新航向/位置保持
+                    yaw_ref[0] = body_yaw(data)
+                    pos_ref[0] = data.qpos[0:2].copy()
+                else:
+                    yaw_ref[0] = None  # 停止：解除航向/横向锁定
+                    pos_ref[0] = None
+
+                targets = gait.step(dt, vx=lat_cmd, vy=forward, omega=omega_cmd)
+                apply_ctrl(model, data, targets)
+                for _ in range(max(1, int(dt / model.opt.timestep))):
+                    mujoco.mj_step(model, data)
+
+                moving = (
+                    abs(cmd.vx) > 1e-6 or abs(cmd.vy) > 1e-6 or abs(cmd.omega) > 1e-6
+                )
+                if moving:
+                    label = gait.phase_label()
+                    if label != last_label:
+                        last_label = label
+                        print(f"步态相: {label} | phase={gait.phase:.2f}")
+
+                viewer.sync()
+    except TypeError:
+        print("无键盘环境：自动前进 12 秒…")
+        cmd.vx = max_v
+        t0 = time.time()
+        while time.time() - t0 < 12:
+            dt = model.opt.timestep
+            targets = gait.step(dt, vx=0.0, vy=cmd.vx, omega=cmd.omega)
+            apply_ctrl(model, data, targets)
+            mujoco.mj_step(model, data)
+
+
+if __name__ == "__main__":
+    main()

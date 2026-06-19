@@ -7,17 +7,56 @@ import math
 import mujoco
 
 
-def _body_yaw(data: mujoco.MjData) -> float:
-    qw, qx, qy, qz = (
-        float(data.qpos[3]),
-        float(data.qpos[4]),
-        float(data.qpos[5]),
-        float(data.qpos[6]),
-    )
+def _yaw_from_qpos(qpos, adr: int = 0) -> float:
+    qw = float(qpos[adr + 3])
+    qx = float(qpos[adr + 4])
+    qy = float(qpos[adr + 5])
+    qz = float(qpos[adr + 6])
     return math.atan2(
         2.0 * (qw * qz + qx * qy),
         1.0 - 2.0 * (qy * qy + qz * qz),
     )
+
+
+def stabilize_robot_root(
+    data: mujoco.MjData,
+    root_qposadr: int,
+    root_dofadr: int,
+    yaw_hold: float = 0.0,
+    roll_hold: float = 0.0,
+    pitch_hold: float = 0.0,
+    level_gain: float = 3.5,
+) -> None:
+    """多机场景：对单只机器人的 free joint 做侧向/偏航/水平阻尼。"""
+    adr = int(root_qposadr)
+    dof = int(root_dofadr)
+    roll, pitch = _roll_pitch_from_qpos(data.qpos, adr)
+    yaw_err = _yaw_from_qpos(data.qpos, adr) - float(yaw_hold)
+    while yaw_err > math.pi:
+        yaw_err -= 2.0 * math.pi
+    while yaw_err < -math.pi:
+        yaw_err += 2.0 * math.pi
+    roll_err = roll - float(roll_hold)
+    pitch_err = pitch - float(pitch_hold)
+    data.qvel[dof + 3] -= level_gain * roll_err
+    data.qvel[dof + 4] -= level_gain * pitch_err
+    data.qvel[dof + 5] -= 2.0 * yaw_err
+    data.qvel[dof + 0] *= 0.55
+    data.qvel[dof + 1] *= 0.88
+    data.qvel[dof + 2] *= 0.82
+    data.qvel[dof + 3] *= 0.50
+    data.qvel[dof + 4] *= 0.50
+    data.qvel[dof + 5] *= 0.65
+
+
+def _roll_pitch_from_qpos(qpos, adr: int = 0) -> tuple[float, float]:
+    qw = float(qpos[adr + 3])
+    qx = float(qpos[adr + 4])
+    qy = float(qpos[adr + 5])
+    qz = float(qpos[adr + 6])
+    roll = math.atan2(2.0 * (qw * qx + qy * qz), 1.0 - 2.0 * (qx * qx + qy * qy))
+    pitch = math.asin(max(-1.0, min(1.0, 2.0 * (qw * qy - qz * qx))))
+    return roll, pitch
 
 
 def stabilize_locomotion_body(
@@ -25,24 +64,21 @@ def stabilize_locomotion_body(
     data: mujoco.MjData,
     body_z_target: float,
     yaw_hold: float = 0.0,
+    roll_hold: float = 0.0,
+    pitch_hold: float = 0.0,
 ) -> None:
     """
-    轻度速度阻尼 + 弱偏航回正，抑制持续右偏/转圈。
+    轻度速度阻尼 + 弱偏航/水平回正，抑制持续右偏与机身倾斜。
     不直接写 qpos，避免机身被“吊起来”。
     """
-    del body_z_target
-    if model.nq < 7:
+    del body_z_target, model
+    if data.qpos.shape[0] < 7:
         return
-
-    yaw_err = _body_yaw(data) - float(yaw_hold)
-    while yaw_err > math.pi:
-        yaw_err -= 2.0 * math.pi
-    while yaw_err < -math.pi:
-        yaw_err += 2.0 * math.pi
-    data.qvel[5] -= 2.0 * yaw_err
-    data.qvel[0] *= 0.55
-    data.qvel[1] *= 0.88
-    data.qvel[2] *= 0.82
-    data.qvel[3] *= 0.55
-    data.qvel[4] *= 0.55
-    data.qvel[5] *= 0.65
+    stabilize_robot_root(
+        data,
+        0,
+        0,
+        yaw_hold=yaw_hold,
+        roll_hold=roll_hold,
+        pitch_hold=pitch_hold,
+    )

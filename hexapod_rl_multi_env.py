@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import os
+import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import gymnasium as gym
@@ -16,16 +17,30 @@ import numpy as np
 from gymnasium import spaces
 
 from build_multi_mjcf import build_multi_mjcf, random_spawn_positions
+from body_stabilizer import stabilize_robot_root
 from ctrl_smoother import CtrlSmoother
 from enable_state import LOCOMOTION_KP, LOCOMOTION_KV, set_actuator_gains
 from foot_kinematics import load_stand_pose, resolve_post_enable_stand
 from gait import create_forward_tripod_gait
 from hexapod_rl_env import VX_CMD, _quat_rp
-from rl_posture import settle_multi_robots, sync_gait_stand
+from imu_sensor import ImuBinding, imu_obs_vector
+from rl_posture import RL_WARMUP_STAND_STEPS, settle_multi_robots, sync_gait_stand
 from rl_reward import MAX_SPEED_VX_MPS, TRACK_VX_MPS, compute_walk_reward
 from robot_limits import all_joint_names, clamp_joint_targets
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _default_spawn_layout(n_robots: int) -> tuple[float, float, float]:
+    """按机器人数返回 (spawn_span, min_spawn_dist, camera_distance_hint)。"""
+    if n_robots <= 8:
+        return 7.0, 1.25, 10.0
+    if n_robots <= 16:
+        return 12.0, 1.5, 16.0
+    if n_robots <= 24:
+        return 16.0, 1.7, 22.0
+    # 30 机：更大散布，减少互撞
+    return 20.0, 1.9, 26.0
 
 
 def _prefixed_joint_names(prefix: str) -> List[str]:
@@ -91,6 +106,13 @@ class _RobotSlot:
         )
         self._base_id = mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, self.base_body
+        )
+        self._imu = ImuBinding(
+            model,
+            prefix=prefix,
+            root_qposadr=self._root_qposadr,
+            root_dofadr=self._root_dofadr,
+            base_body_id=self._base_id,
         )
 
         # 多机场景勿传整场景 model（会重复做 12 次 IK/足底标定，极慢）
@@ -196,10 +218,9 @@ class _RobotSlot:
     def get_obs(self, data: mujoco.MjData) -> np.ndarray:
         adr = self._root_qposadr
         q_root = data.qpos[adr : adr + 7]
-        roll, pitch = _quat_rp(q_root[3:7])
+        imu = self._imu.read(data)
         R = data.xmat[self._base_id].reshape(3, 3)
         v_body = R.T @ data.qvel[self._root_dofadr : self._root_dofadr + 3]
-        wz = float(data.qvel[self._root_dofadr + 5])
 
         q = data.qpos[self._j_qposadr].astype(np.float64)
         q_stand = np.array(
@@ -211,9 +232,8 @@ class _RobotSlot:
 
         parts = [
             np.array([float(q_root[2]) - self.body_z], dtype=np.float32),
-            np.array([roll, pitch], dtype=np.float32),
+            imu_obs_vector(imu),
             v_body.astype(np.float32),
-            np.array([wz], dtype=np.float32),
             q_rel.astype(np.float32),
             (qd * 0.05).astype(np.float32),
             np.array(
@@ -234,26 +254,27 @@ class _RobotSlot:
         return False
 
     def compute_reward(self, data: mujoco.MjData, action: np.ndarray) -> Tuple[float, Dict]:
+        imu = self._imu.read(data)
         R = data.xmat[self._base_id].reshape(3, 3)
         v_body = R.T @ data.qvel[self._root_dofadr : self._root_dofadr + 3]
         v_forward = float(v_body[1])
         v_lateral = float(v_body[0])
-        wz = float(data.qvel[self._root_dofadr + 5])
+        wz = float(imu.gyro[2])
         z_err = float(data.qpos[self._root_qposadr + 2] - self.body_z)
-        adr = self._root_qposadr
-        roll, pitch = _quat_rp(data.qpos[adr + 3 : adr + 7])
 
         reward, rinfo = compute_walk_reward(
             v_forward,
             v_lateral,
             wz,
             z_err,
-            roll,
-            pitch,
+            imu.roll,
+            imu.pitch,
             action,
             self._last_action,
             mode=self.reward_mode,
             vx_target=TRACK_VX_MPS,
+            gyro=imu.gyro,
+            acc=imu.acc,
         )
         return reward, {
             **rinfo,
@@ -281,6 +302,10 @@ class _RobotSlot:
             )
             targets[jn] = val
         targets = clamp_joint_targets(self._clamp_model, targets)
+        ph = self.gait.last_phase or ""
+        self._ctrl_smoother.tau = (
+            0.006 if ("swing" in ph or "place" in ph) else 0.038
+        )
         smoothed = self._ctrl_smoother.filter(
             {jn[len(self.prefix) :]: targets[jn] for jn in self.joint_names},
             control_dt,
@@ -300,16 +325,16 @@ class HexapodMultiArena:
 
     def __init__(
         self,
-        n_robots: int = 12,
-        spacing: float = 1.05,
+        n_robots: int = 30,
+        spacing: float = 1.15,
         control_dt: float = 0.02,
         max_episode_steps: int = 500,
-        residual_scale: float = 0.06,
+        residual_scale: float = 0.08,
         render_mode: Optional[str] = None,
         seed: Optional[int] = None,
         random_layout: bool = True,
-        spawn_span: float = 3.5,
-        min_spawn_dist: float = 0.85,
+        spawn_span: float | None = None,
+        min_spawn_dist: float | None = None,
         respawn_mode: str = "soft",
         respawn_delay_steps: int = 60,
         render_stride: int = 2,
@@ -322,8 +347,12 @@ class HexapodMultiArena:
         self.residual_scale = residual_scale
         self.render_mode = render_mode
         self.random_layout = random_layout
-        self.spawn_span = spawn_span
-        self.min_spawn_dist = min_spawn_dist
+        default_span, default_dist, cam_hint = _default_spawn_layout(n_robots)
+        self.spawn_span = float(spawn_span if spawn_span is not None else default_span)
+        self.min_spawn_dist = float(
+            min_spawn_dist if min_spawn_dist is not None else default_dist
+        )
+        self._camera_distance_hint = cam_hint
         self.respawn_mode = respawn_mode
         self.respawn_delay_steps = max(0, int(respawn_delay_steps))
         self.render_stride = max(1, int(render_stride))
@@ -348,8 +377,14 @@ class HexapodMultiArena:
         if raw is None:
             raise RuntimeError("缺少 generated/stand_pose_flat.json")
         coxa_pose, _ = raw
-        stand_pose, body_z = resolve_post_enable_stand(self.model, coxa_pose)
+        # 站立角标定只需单机模型；多机 MJCF 编译极慢且关节名带前缀
+        single_model_path = os.path.join(
+            SCRIPT_DIR, "generated", "SIX-MOTOR_sim.xml"
+        )
+        single_model = mujoco.MjModel.from_xml_path(single_model_path)
+        stand_pose, body_z = resolve_post_enable_stand(single_model, coxa_pose)
         print(f"[arena] 使能完成站立 body_z={body_z:.3f} m", flush=True)
+        self._settle_steps = 160 if n_robots >= 24 else 200
 
         from build_multi_mjcf import _grid_xy
 
@@ -371,7 +406,7 @@ class HexapodMultiArena:
             )
 
         n_j = len(all_joint_names())
-        obs_dim = 1 + 2 + 3 + 1 + n_j + n_j + 2
+        obs_dim = 1 + 8 + 3 + n_j + n_j + 2
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
@@ -500,7 +535,9 @@ class HexapodMultiArena:
                 vx_scale=vx_scale,
             )
 
-        settle_multi_robots(self.model, self.data, self.robots)
+        settle_multi_robots(
+            self.model, self.data, self.robots, steps=self._settle_steps
+        )
         for bot in self.robots:
             adr = bot._root_qposadr
             bot.body_z = float(self.data.qpos[adr + 2])
@@ -536,8 +573,17 @@ class HexapodMultiArena:
             mujoco.mj_step(self.model, self.data)
 
         for bot in self.robots:
-            if not bot._inactive:
-                bot.damp_legs(self.data)
+            if bot._inactive:
+                continue
+            stabilize_robot_root(
+                self.data,
+                bot._root_qposadr,
+                bot._root_dofadr,
+                yaw_hold=bot.spawn_yaw,
+                roll_hold=0.0,
+                pitch_hold=0.0,
+            )
+            bot.damp_legs(self.data)
 
         rewards = np.zeros(self.n_robots, dtype=np.float32)
         terminated = np.zeros(self.n_robots, dtype=bool)
@@ -571,9 +617,7 @@ class HexapodMultiArena:
         obs = self._get_obs_batch()
 
         if self.render_mode == "human":
-            self._render_counter += 1
-            if self._render_counter % self.render_stride == 0:
-                self.render()
+            self.render()
 
         return obs, rewards, terminated, np.array([inf["truncated"] for inf in infos]), infos
 
@@ -591,10 +635,18 @@ class HexapodMultiArena:
             print("[arena] 窗口已打开（鼠标旋转视角，关闭窗口结束）", flush=True)
             # 拉远相机，俯瞰整个机器人阵列
             self._viewer.cam.lookat[:] = (0.0, 0.0, 0.08)
-            self._viewer.cam.distance = max(6.0, self.spawn_span * 1.6 + 2.0)
-            self._viewer.cam.elevation = -18
+            self._viewer.cam.distance = max(
+                self._camera_distance_hint, self.spawn_span * 1.55 + 2.5
+            )
+            self._viewer.cam.elevation = -22
             self._viewer.cam.azimuth = 140
-        self._viewer.sync()
+            self._last_render_time = time.time()
+        # 时间基限帧：最多 30 FPS，防止 viewer.sync() 阻塞物理循环导致卡顿
+        now = time.time()
+        min_interval = 1.0 / 30.0
+        if now - self._last_render_time >= min_interval:
+            self._viewer.sync()
+            self._last_render_time = now
         return None
 
     def close(self):

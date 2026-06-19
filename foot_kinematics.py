@@ -528,7 +528,7 @@ def calibrate_suspended_stand(
     在可达范围内尽量抬高 body_z，使主体下沿接近 TARGET_BASE_CLEARANCE。
     """
     best: Tuple[float, float, Dict[str, float], float] | None = None
-    for bz in np.linspace(0.058, 0.078, 7):
+    for bz in np.linspace(0.058, 0.080, 8):
         trial = dict(pose)
         for leg in range(1, 7):
             trial = _adjust_leg_foot_height(
@@ -560,13 +560,13 @@ def calibrate_suspended_stand(
         base_clr = body_bottom_clearance(model, data, float(bz))
         spread = max(pads.values()) - min(pads.values())
         max_pad = max(pads.values())
-        if max_pad > 0.018:
+        if max_pad > 0.010:
             continue
         score = (
-            120.0 * spread**2
-            + 40.0 * (base_clr - TARGET_BASE_CLEARANCE) ** 2
-            + 30.0 * max(0.0, target_pad_z - min(pads.values())) ** 2
-            - 3.0 * float(bz)
+            400.0 * spread**2
+            + 60.0 * (base_clr - TARGET_BASE_CLEARANCE) ** 2
+            + 80.0 * max(0.0, target_pad_z - min(pads.values())) ** 2
+            - 1.5 * float(bz)
         )
         if best is None or score < best[0]:
             best = (score, float(bz), trial, base_clr)
