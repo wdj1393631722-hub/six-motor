@@ -23,6 +23,18 @@ case "${1:-locomotion}" in
   planar|planar-tripod|walk)
     exec "$PY" -u run_planar_tripod.py
     ;;
+  wall|climb)
+    echo "启动 磁吸爬墙…（先点一下窗口，I 向上爬 / K 下 / J,L 转 / P 驻留 / 1-6,M 磁力）"
+    exec "$PY" -u wall_demo.py
+    ;;
+  slope)
+    echo "启动 坡面爬行…"
+    exec "$PY" -u slope_demo.py
+    ;;
+  circle|s|trajectory)
+    echo "启动 轨迹演示（走圆/S）…"
+    exec "$PY" -u trajectory_demo.py "${1}"
+    ;;
   calibrate|stand)
     exec "$PY" foot_kinematics.py
     ;;
@@ -68,9 +80,12 @@ report_flatness(m, pose, bz)
     exec "$PY" tune_pose.py "$@"
     ;;
   *)
-    echo "用法: $0 [locomotion|planar|forward|calibrate|prone|export|validate|build|tune|rl|rl-view|rl-eval|rl-arena]"
+    echo "用法: $0 [locomotion|planar|wall|slope|circle|s|forward|calibrate|prone|export|validate|build|tune|rl|rl-view|rl-eval|rl-arena]"
     echo "  locomotion  前进/后退/转弯（默认）"
     echo "  planar      平面三角步态（足底全程平行地面、抬脚行走，I/K/J/L 控制）"
+    echo "  wall        磁吸爬垂直墙面（I 向上爬 / K 下 / J,L 转 / P 驻留 / 1-6,M 磁力）"
+    echo "  slope       坡面爬行"
+    echo "  circle | s  轨迹演示：走圆 / 走 S 形"
     echo "  forward     仅前进三角步态"
     echo "  calibrate   标定站立姿态"
     echo "  prone       标定失能趴地姿态（足底贴地）"

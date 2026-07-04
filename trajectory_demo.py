@@ -18,11 +18,12 @@ import mujoco
 import mujoco.viewer
 
 from run_planar_tripod import (
-    MODEL_PATH, STAND_PATH, WALK_KP, WALK_KV,
+    MODEL_PATH, STAND_PATH, WALK_KP, WALK_KV, MAGNET_KG,
     load_stand, set_gains, reset_standing, apply_ctrl,
     body_yaw, wrap_pi,
 )
 from planar_tripod_gait import PlanarTripodGait
+from leg_magnets import LegMagnets
 
 FORWARD = 0.4        # 前进指令（实测约 0.33 m/s）
 OMEGA = 1.8          # 转向指令幅度上限（圆形用作恒定转向；S 形用作 omega 限幅）
@@ -101,7 +102,8 @@ def draw_trail(scn, trail, rgba):
         )
 
 
-def run_pattern(model, data, gait, stand_pose, body_z, viewer, pattern, rgba):
+def run_pattern(model, data, gait, stand_pose, body_z, viewer, pattern, rgba,
+                magnets=None):
     gait.reset()
     reset_standing(model, data, stand_pose, body_z)
     yaw0 = body_yaw(data)   # 锁定中轴线方向（整条 S 围绕它对称延伸）
@@ -124,6 +126,8 @@ def run_pattern(model, data, gait, stand_pose, body_z, viewer, pattern, rgba):
         targets = gait.step(dt, vx=0.0, vy=forward, omega=omega)
         apply_ctrl(model, data, targets)
         for _ in range(max(1, int(dt / model.opt.timestep))):
+            if magnets is not None:
+                magnets.apply()      # 施加足底吸附外力
             mujoco.mj_step(model, data)
 
         # 采样机身水平位置（滚动保留最近 TRAIL_MAX 点）
@@ -152,20 +156,28 @@ def main():
     set_gains(model, WALK_KP, WALK_KV)
     reset_standing(model, data, stand_pose, body_z)
 
-    with mujoco.viewer.launch_passive(model, data) as viewer:
+    magnets = LegMagnets(model, data, force_kg=MAGNET_KG, start_enabled=False)
+    # 数字键 1-6 单腿磁力通断、M 键全部通断（走圆/S 时也可控）
+    from viewer_controls import VelocityCommand, make_key_handler
+    key_callback = make_key_handler(VelocityCommand(), magnets=magnets)
+    print(f"足底磁力: 单腿 {MAGNET_KG:.0f}kg | 数字键 1-6 单腿通断, M 键全部通断 | {magnets.status_str()}", flush=True)
+
+    with mujoco.viewer.launch_passive(
+        model, data, key_callback=key_callback
+    ) as viewer:
         viewer.cam.lookat[:] = [0.0, 0.5, 0.0]
         viewer.cam.distance = 3.5
         viewer.cam.elevation = -75      # 接近俯视，方便看轨迹
         viewer.cam.azimuth = 90
         if pattern == "both":
             run_pattern(model, data, gait, stand_pose, body_z, viewer,
-                        "circle", [1.0, 0.2, 0.2, 1.0])
+                        "circle", [1.0, 0.2, 0.2, 1.0], magnets=magnets)
             run_pattern(model, data, gait, stand_pose, body_z, viewer,
-                        "s", [0.2, 0.4, 1.0, 1.0])
+                        "s", [0.2, 0.4, 1.0, 1.0], magnets=magnets)
         else:
             rgba = [1.0, 0.2, 0.2, 1.0] if pattern == "circle" else [0.2, 0.4, 1.0, 1.0]
             run_pattern(model, data, gait, stand_pose, body_z, viewer,
-                        pattern, rgba)
+                        pattern, rgba, magnets=magnets)
         print("演示结束，保持窗口。按需关闭。", flush=True)
         while viewer.is_running():
             viewer.sync()

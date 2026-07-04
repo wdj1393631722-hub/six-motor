@@ -35,6 +35,15 @@ STAND_PATH = os.path.join(SCRIPT_DIR, "generated", "stand_pose_flat.json")
 sys.path.insert(0, SCRIPT_DIR)
 from planar_tripod_gait import PlanarTripodGait, TRIPOD_A, TRIPOD_B
 from viewer_controls import CONTROL_HELP, VelocityCommand, make_key_handler
+from leg_magnets import LegMagnets
+
+# 足底磁力：吸附时单腿保持力 (kg)，与实体机器人一致。抬脚悬空自动无磁；
+# 每条腿可用数字键 1-6 单独通断，M 键全部通断。
+# 注意：50kg 对约 27kg 的整机是极强吸附，通电站立腿会被牢牢按住——用于「停住吸附/
+# 斜面驻留」很合适，但六腿全通电时位控步态会被钉住走不动（属正常物理现象）。
+# 因此默认开机不通电，需要时按键使能即可；若想边走边吸，可把 MAGNET_KG 调小些。
+MAGNET_KG = 50.0
+MAGNET_START_ON = False
 
 # 行走 PD 增益：折中刚度，抓地实、下沉小，落足顺
 WALK_KP = 200.0
@@ -122,6 +131,8 @@ def main():
     set_gains(model, WALK_KP, WALK_KV)
     reset_standing(model, data, stand_pose, body_z)
 
+    magnets = LegMagnets(model, data, force_kg=MAGNET_KG, start_enabled=MAGNET_START_ON)
+
     max_v = 0.85    # 前进指令（直线后蹬模式下实测前进约 0.33 m/s）
     max_turn = 2.2  # 转向指令（加大→转弯时各腿步幅/coxa摆幅更大，转得更快）
     cmd = VelocityCommand()
@@ -136,12 +147,13 @@ def main():
         reset_standing(model, data, stand_pose, body_z)
 
     key_callback = make_key_handler(
-        cmd, max_v=max_v, max_turn=max_turn, on_reset=on_reset
+        cmd, max_v=max_v, max_turn=max_turn, on_reset=on_reset, magnets=magnets
     )
 
     print(f"加载模型: {MODEL_PATH}")
     print(f"站立机身高度: {body_z*1000:.1f} mm | 三角组 A{TRIPOD_A} B{TRIPOD_B}")
     print(f"周期 {gait.cycle_time:.1f}s | 抬脚 {gait.lift_height*1000:.0f}mm | 足底全程平行地面")
+    print(f"足底磁力: 单腿 {MAGNET_KG:.0f}kg | 数字键 1-6 单腿通断, M 键全部通断 | {magnets.status_str()}")
     print(CONTROL_HELP)
     print("提示: 先点一下 MuJoCo 窗口，再按 I/K/J/L 行走。")
 
@@ -191,6 +203,7 @@ def main():
                 targets = gait.step(dt, vx=lat_cmd, vy=forward, omega=omega_cmd)
                 apply_ctrl(model, data, targets)
                 for _ in range(max(1, int(dt / model.opt.timestep))):
+                    magnets.apply()          # 施加足底吸附外力
                     mujoco.mj_step(model, data)
 
                 moving = (
@@ -211,6 +224,7 @@ def main():
             dt = model.opt.timestep
             targets = gait.step(dt, vx=0.0, vy=cmd.vx, omega=cmd.omega)
             apply_ctrl(model, data, targets)
+            magnets.apply()
             mujoco.mj_step(model, data)
 
 

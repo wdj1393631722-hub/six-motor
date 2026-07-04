@@ -393,6 +393,32 @@ class PlanarTripodGait:
         a_sw, _ = self._leg_swinging(1, self._phase)
         return "A摆动/B支撑" if a_sw else "A支撑/B摆动"
 
+    # ---- 摆动/支撑查询（供磁力‑步态联动等外部使用）----------------------
+    def is_swing(self, leg: int, lead: float = 0.0) -> bool:
+        """第 leg 条腿当前是否处于摆动相（足端抬离/前摆）。
+
+        lead: 相位提前量 ∈[0,1)。>0 时相当于"提前 lead 个相位"判断，
+        可用于抬脚前提前释放磁力（避免足端被磁钉住却要抬脚而较劲）。
+        """
+        sw, _ = self._leg_swinging(leg, (self._phase + lead) % 1.0)
+        return sw
+
+    def swing_state(self, leg: int) -> Tuple[bool, float]:
+        """返回第 leg 条腿当前 (是否摆动相, 相内进度 u∈[0,1])。
+
+        u 是摆动/支撑子相内的归一化进度：摆动时 u 从 0（刚抬脚）到 1（将落地），
+        足端抬升高度 ∝ sin(π·u)（u=0.5 最高）。磁力‑步态联动用它判断"何时释放"。
+        """
+        return self._leg_swinging(leg, self._phase)
+
+    def swing_legs(self, lead: float = 0.0) -> list:
+        """当前（提前 lead 相位后）处于摆动相的腿号列表。"""
+        return [leg for leg in range(1, 7) if self.is_swing(leg, lead)]
+
+    def stance_legs(self, lead: float = 0.0) -> list:
+        """当前（提前 lead 相位后）处于支撑相的腿号列表。"""
+        return [leg for leg in range(1, 7) if not self.is_swing(leg, lead)]
+
 
 # 髋座在 base 系的水平位置（与 robot_params_for_gait.json 一致）
 _HIP_XY: Dict[int, Tuple[float, float]] = {

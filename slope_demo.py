@@ -34,7 +34,14 @@ from run_planar_tripod import (
 from planar_tripod_gait import PlanarTripodGait
 from viewer_controls import VelocityCommand, make_key_handler
 from trajectory_demo import draw_trail
+from leg_magnets import LegMagnets
 import slope_terrain
+
+# 足底磁力：坡面/船底面上停住吸附、防滑防跌。吸附单腿 50kg，抬脚自动无磁。
+# 数字键 1-6 单腿通断、M 键全部通断。默认开机不通电（六腿全通电会钉住步态走不动）；
+# 想在坡上停住不下滑时按 M 一键吸附即可。
+MAGNET_KG = 50.0
+MAGNET_START_ON = False
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SLOPE_MODEL = os.path.join(SCRIPT_DIR, "generated", "SIX-MOTOR_slope.xml")
@@ -52,6 +59,8 @@ CONTROL_HELP = """
   L 或 →   右转
   P        停止
   B        重置到坡前站立
+  1-6      切换第 N 条腿磁力使能（通电吸附/断电）
+  M        一键 全部磁力 通电/断电（坡上停住吸附、防下滑）
 鼠标用于旋转/平移视角。直线行进时自动锁航向+横向走直。
 """
 
@@ -82,6 +91,8 @@ def main():
     set_gains(model, WALK_KP, WALK_KV)
     reset_standing(model, data, stand_pose, body_z)
 
+    magnets = LegMagnets(model, data, force_kg=MAGNET_KG, start_enabled=MAGNET_START_ON)
+
     cmd = VelocityCommand()
     yaw_ref = [None]      # 直线行进时锁定的目标航向
     pos_ref = [None]      # 直线行进起点的机身水平位置 (world xy)
@@ -95,10 +106,13 @@ def main():
         gait.reset()
         reset_standing(model, data, stand_pose, body_z)
 
-    key_callback = make_key_handler(cmd, max_v=MAX_V, max_turn=MAX_TURN, on_reset=on_reset)
+    key_callback = make_key_handler(
+        cmd, max_v=MAX_V, max_turn=MAX_TURN, on_reset=on_reset, magnets=magnets
+    )
 
     print(CONTROL_HELP)
     print(f"坡面：倾角≈{terr['angle_deg']}°，坡脚 y={terr['y_foot']}，坡顶 y={terr['y_top']}", flush=True)
+    print(f"足底磁力: 单腿 {MAGNET_KG:.0f}kg | 数字键 1-6 单腿通断, M 键全部通断 | {magnets.status_str()}", flush=True)
 
     last_real = time.time()
     last_sample = -1.0
@@ -143,6 +157,7 @@ def main():
             targets = gait.step(dt, vx=lat_cmd, vy=forward, omega=omega_cmd)
             apply_ctrl(model, data, targets)
             for _ in range(max(1, int(dt / model.opt.timestep))):
+                magnets.apply()          # 施加足底吸附外力（沿坡面法向压紧）
                 mujoco.mj_step(model, data)
 
             if sim_t - last_sample >= TRAIL_DT:
