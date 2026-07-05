@@ -66,6 +66,17 @@ class PlanarTripodGait:
     # --- 直线后蹬模式 ('linear') 参数 ---
     gait_mode: str = "linear"       # 'linear' 足端机身系直线后蹬(快、无scrub) | 'arc' 旧版纯coxa画弧
     max_stride: float = 0.28        # 单腿足端单周期最大水平位移 (m)，限幅防越限/打滑
+    use_ik: bool = True             # linear 模式足端目标用**迭代IK**精确求解(见下)。
+                                    #   旧版只用站立点线性化的一发 jinv：有限步长下足端实际
+                                    #   走成弧线而非直线，右前(leg6)等腿足端向机身中心偏移
+                                    #   可达 50mm、并意外抬升 30mm → 末端朝中心、蹭地/卡腿。
+                                    #   迭代IK(热启动+每步重算雅可比)让足端精确落到直线目标(<1mm)。
+    ik_iters: int = 2               # 每帧每腿 IK 牛顿迭代次数（热启动下 2 次即收敛到亚毫米）
+    stop_settle_cycles: float = 1.0  # 停止指令后继续以衰减步幅走动的周期数。
+                                     #   直接冻结会把支撑腿"钉"在迈步中途的扫掠位置：磁吸
+                                     #   490N 产生的面内摩擦让 coxa 力矩拖不回中位 → 卡腿。
+                                     #   续走 ≥1 周期让每条腿都抬脚一次、在中位重新落地，
+                                     #   足端离面时无摩擦，得以干净回到站立位再静止吸牢。
     verbose: bool = True
 
     # --- 运行时状态（非入参）---
@@ -78,6 +89,9 @@ class PlanarTripodGait:
         default_factory=dict, init=False
     )
     _foot_gid: Dict[int, int] = field(default_factory=dict, init=False)
+    _stop_timer: float = field(default=0.0, init=False)   # 停止收敛剩余时间 (s)
+    _active: bool = field(default=False, init=False)       # 步态是否仍在走动(含收敛)
+    _ik_seed: Dict[int, np.ndarray] = field(default_factory=dict, init=False)  # 各腿IK热启动种子
 
     def __post_init__(self) -> None:
         self._data = mujoco.MjData(self.model)
@@ -94,6 +108,7 @@ class PlanarTripodGait:
             self._foot_gid[leg] = int(gid)
             self._amp[leg] = 0.0
             self._svec[leg] = np.zeros(2)
+            self._ik_seed[leg] = np.zeros(3)
         self._calibrate()
 
     # ----------------------------------------------------------------- 标定
@@ -241,9 +256,12 @@ class PlanarTripodGait:
 
     def reset(self) -> None:
         self._phase = 0.0
+        self._stop_timer = 0.0
+        self._active = False
         for leg in range(1, 7):
             self._amp[leg] = 0.0
             self._svec[leg] = np.zeros(2)
+            self._ik_seed[leg] = np.zeros(3)
 
     def _foot_stride_target(self, leg: int, vx: float, vy: float, omega: float) -> np.ndarray:
         """该腿单周期足端水平位移向量(base xy)：机身系直线后蹬方向·幅度。"""
@@ -279,26 +297,43 @@ class PlanarTripodGait:
         vy: float = 0.0,
         omega: float = 0.0,
     ) -> Dict[str, float]:
-        """推进一帧，返回 18 个关节目标角 {joint_name: rad}。"""
-        moving = abs(vx) > 1e-6 or abs(vy) > 1e-6 or abs(omega) > 1e-6
+        """推进一帧，返回 18 个关节目标角 {joint_name: rad}。
 
-        # 摆幅/步幅指令平滑（避免命令突变导致蹬地）
+        停止（指令归零）后不立即冻结，而是继续以**衰减步幅**走动
+        stop_settle_cycles 个周期：步幅平滑趋零后仍在原地抬脚、把每条腿在中位
+        重新落地，借足端离面(磁力归零、无摩擦)摆脱磁吸对足端的"钉扎"，从而
+        干净回到站立位再静止吸牢——否则支撑腿被磁力钉在迈步中途扫掠位置，
+        coxa 力矩拖不动而卡腿。
+        """
+        cmd_moving = abs(vx) > 1e-6 or abs(vy) > 1e-6 or abs(omega) > 1e-6
+
+        # 停止收敛计时：命令在动则重置计时；命令归零则倒计时，期间仍走动收步。
+        if cmd_moving:
+            self._stop_timer = max(self.stop_settle_cycles, 0.0) * self.cycle_time
+        else:
+            self._stop_timer = max(0.0, self._stop_timer - dt)
+        active = cmd_moving or self._stop_timer > 0.0
+
+        # 摆幅/步幅指令平滑（命令归零时目标即 0，步幅平滑衰减→原地抬脚回中位）
         alpha = 1.0 - math.exp(-dt / max(self.swing_smooth_tau, 1e-4))
         for leg in range(1, 7):
-            tgt = self._coxa_amp_target(leg, vx, vy, omega) if moving else 0.0
+            tgt = self._coxa_amp_target(leg, vx, vy, omega) if cmd_moving else 0.0
             self._amp[leg] += alpha * (tgt - self._amp[leg])
             svec_tgt = (
                 self._foot_stride_target(leg, vx, vy, omega)
-                if moving
+                if cmd_moving
                 else np.zeros(2)
             )
             self._svec[leg] += alpha * (svec_tgt - self._svec[leg])
 
-        if moving:
+        if active:
             self._phase = (self._phase + dt / max(self.cycle_time, 1e-6)) % 1.0
+        else:
+            self._phase = 0.0   # 收敛完毕→相位归零，下次从干净三角相起步
+        self._active = active
 
         if self.gait_mode == "linear":
-            return self._emit_linear(moving)
+            return self._emit_linear(active)
 
         comp = self.height_comp_m  # 前馈抬升：脚在地固定时把机身顶高
         out: Dict[str, float] = {}
@@ -311,7 +346,7 @@ class PlanarTripodGait:
             # lift_m = 脚相对机身的净上移量（脚坐标）。
             #   支撑腿伸长(-comp) → 脚相对机身下移 → 机身被顶高 comp。
             #   摆动腿离地 = lift·sin(πu)，叠加 -comp 基准 → 净离地 (lift-comp)。
-            if not moving:
+            if not active:
                 # 静止：全腿落地站立（coxa 回中），支撑腿伸长抬机身
                 coxa = c0
                 lift_m = -comp
@@ -337,7 +372,7 @@ class PlanarTripodGait:
             out[f"leg{leg}_tibia_joint"] = self._clamp(leg, "tibia", tibia)
         return out
 
-    def _emit_linear(self, moving: bool) -> Dict[str, float]:
+    def _emit_linear(self, active: bool) -> Dict[str, float]:
         """直线后蹬模式：足端在机身系走直线，雅可比解三关节增量。
 
         支撑相：脚平贴地面，从前位(-stride/2)直线扫到后位(+stride/2)推进机身。
@@ -353,7 +388,7 @@ class PlanarTripodGait:
             c0 = self.stand_pose[f"leg{leg}_coxa_joint"]
             stride = self._svec[leg]  # base xy 位移向量（指向后蹬方向）
 
-            if not moving:
+            if not active:
                 d_xy = np.zeros(2)
                 d_z = -comp
             else:
@@ -370,16 +405,61 @@ class PlanarTripodGait:
                     d_xy = stride * (s - 0.5)
                     d_z = -comp
 
-            # 足端目标位移 (base xyz) → 关节增量
+            # 足端目标位移 (base xyz) → 关节增量。精确 IK 迭代求解（见 _solve_leg_ik）：
+            # 让足端真正落在直线目标上，消除 leg6 等腿的向心弧偏与寄生抬升。
             dxyz = np.array([d_xy[0], d_xy[1], d_z], dtype=float)
-            dq = cal.jinv @ dxyz
-            coxa = c0 + dq[0]
-            femur = f0 + dq[1]
-            tibia = t0 + dq[2]
-            out[f"leg{leg}_coxa_joint"] = self._clamp(leg, "coxa", coxa)
-            out[f"leg{leg}_femur_joint"] = self._clamp(leg, "femur", femur)
-            out[f"leg{leg}_tibia_joint"] = self._clamp(leg, "tibia", tibia)
+            if self.use_ik:
+                dq = self._solve_leg_ik(leg, dxyz)
+                self._ik_seed[leg] = dq          # 热启动下一帧
+            else:
+                dq = cal.jinv @ dxyz
+            out[f"leg{leg}_coxa_joint"] = self._clamp(leg, "coxa", c0 + dq[0])
+            out[f"leg{leg}_femur_joint"] = self._clamp(leg, "femur", f0 + dq[1])
+            out[f"leg{leg}_tibia_joint"] = self._clamp(leg, "tibia", t0 + dq[2])
         return out
+
+    # ------------------------------------------------------------------ 足端 IK
+    def _foot_xyz_offset(self, leg: int, dq: np.ndarray) -> np.ndarray:
+        """在站立位施加关节增量 dq=(dcoxa,dfemur,dtibia)，正解得 base 系足端 (3,)。"""
+        self._forward_with(leg, float(dq[0]), float(dq[1]), float(dq[2]))
+        gp = self._data.geom_xpos[self._foot_gid[leg]]
+        return np.array([gp[0], gp[1], gp[2]], dtype=float)
+
+    def _clamp_dq(self, leg: int, dq: np.ndarray) -> np.ndarray:
+        """把关节增量夹到各关节限位内（相对站立值）。"""
+        out = np.array(dq, dtype=float)
+        for k, j in enumerate(LEG_JOINTS):
+            j0 = self.stand_pose[f"leg{leg}_{j}_joint"]
+            lo, hi = self._jrange[(leg, j)]
+            out[k] = float(np.clip(j0 + out[k], lo, hi)) - j0
+        return out
+
+    def _solve_leg_ik(self, leg: int, dxyz: np.ndarray) -> np.ndarray:
+        """足端目标位移(base xyz, 相对站立) → 关节增量(coxa,femur,tibia)。
+
+        阻尼牛顿迭代 + 热启动（种子=上一帧解）。每步用有限差分重算 3×3 足端雅可比，
+        故能贴合当前姿态的非线性、把足端精确送到直线目标；一发 jinv 只在站立点线性
+        化，有限步长下足端走弧线、向心偏移并寄生抬升，是右前腿"末端朝中心"卡腿之源。
+        """
+        cal = self._cal[leg]
+        target = np.array(
+            [cal.stand_foot_xy[0], cal.stand_foot_xy[1], cal.stand_foot_z]
+        ) + np.asarray(dxyz, dtype=float)
+        dq = np.array(self._ik_seed[leg], dtype=float)
+        eps = 0.02
+        eye = np.eye(3)
+        for _ in range(max(1, self.ik_iters)):
+            p = self._foot_xyz_offset(leg, dq)
+            err = target - p
+            if float(err @ err) < 1e-8:      # <0.1mm 即收敛
+                break
+            jac = np.column_stack(
+                [(self._foot_xyz_offset(leg, dq + eye[k] * eps) - p) / eps
+                 for k in range(3)]
+            )
+            dq = dq + np.linalg.solve(jac + 1e-6 * eye, err)   # 阻尼防奇异
+            dq = self._clamp_dq(leg, dq)
+        return dq
 
     def _clamp(self, leg: int, j: str, v: float) -> float:
         lo, hi = self._jrange[(leg, j)]
@@ -388,6 +468,15 @@ class PlanarTripodGait:
     @property
     def phase(self) -> float:
         return self._phase
+
+    @property
+    def active(self) -> bool:
+        """步态是否仍在走动（含停止后的收敛走步阶段）。
+
+        磁力联动应据此判定：active 时 follow_gait（支撑吸/摆动释放），让收敛
+        走步期间摆动腿能抬脚回中位；收敛完成(active=False)才 enable_all 静止吸牢。
+        """
+        return self._active
 
     def phase_label(self) -> str:
         a_sw, _ = self._leg_swinging(1, self._phase)

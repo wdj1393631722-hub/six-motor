@@ -190,14 +190,15 @@ def main():
             head_ref[0] = None
             x_ref[0] = None
 
-        moving = moving_lin or turning
         targets = gait.step(dt, vx=lat_cmd, vy=forward, omega=omega_cmd)
         apply_ctrl(model, data, targets)
+        # 磁力联动跟随步态 active（含停止后的收敛走步）：收敛阶段仍需摆动腿释放、
+        # 抬脚回中位，避免足端被磁吸摩擦钉在迈步中途而卡腿；收敛完成后才全吸牢驻留。
         for _ in range(max(1, int(dt / model.opt.timestep))):
-            if moving:
+            if gait.active:
                 magnets.follow_gait(gait, release=RELEASE)  # 支撑吸/摆动释放
             else:
-                magnets.enable_all()                        # 停止：全部吸牢驻留
+                magnets.enable_all()                        # 停止收敛完成：全部吸牢驻留
             magnets.apply()
             mujoco.mj_step(model, data)
 
