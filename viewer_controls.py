@@ -15,6 +15,7 @@ KEY_B = 66
 KEY_E = 69
 KEY_D = 68
 KEY_M = 77
+KEY_T = 84
 KEY_UP = 265
 KEY_DOWN = 264
 KEY_LEFT = 263
@@ -53,11 +54,13 @@ def make_key_handler(
     on_reset: Optional[Callable[[], None]] = None,
     on_enable: Optional[Callable[[], None]] = None,
     on_disable: Optional[Callable[[], None]] = None,
+    on_mount: Optional[Callable[[], None]] = None,
     magnets=None,
 ) -> Callable[[int], None]:
     """返回 mujoco.viewer.launch_passive 的 key_callback。
 
     magnets: 可选 LegMagnets 实例；提供后数字键 1-6 切换单腿磁力，M 键切换全部。
+    on_mount: 可选回调；提供后按 T 键触发（如平地→竖直墙的乘墙过渡）。默认 None 无行为。
     """
 
     def key_callback(keycode: int) -> None:
@@ -85,6 +88,9 @@ def make_key_handler(
             print("[步态] 重置为站立")
             if on_reset is not None:
                 on_reset()
+        elif on_mount is not None and keycode == KEY_T:
+            print("[过渡] 触发乘墙")
+            on_mount()
         elif magnets is not None and keycode in KEY_DIGIT:
             leg = KEY_DIGIT[keycode]
             on = magnets.toggle(leg)
