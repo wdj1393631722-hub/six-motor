@@ -40,7 +40,7 @@
     <light name="fill" pos="2 2 2.5" dir="-0.6 -0.6 -1" diffuse="0.4 0.42 0.45"/>
     <geom name="floor" type="plane" size="15 15 0.05" pos="0 0 0" material="mat_ground"
           friction="2.0 0.05 0.0001" solref="0.004 1.2" solimp="0.92 0.98 0.001" condim="3"/>
-    <geom name="wall" type="plane" size="8 8 0.05" pos="0 0.0000 0" euler="-1.5708 0 0" material="mat_ground" friction="3.5 0.12 0.0001" solref="0.004 1.2" solimp="0.92 0.98 0.001" condim="3"/>
+    <geom name="wall" type="box" size="8.00 0.0500 4.00" pos="0 -0.0500 4.0000" material="mat_ground" friction="3.5 0.12 0.0001" solref="0.004 1.2" solimp="0.92 0.98 0.001" condim="3"/>
 <body name="base_link">
             <site name="imu_site" pos="0.0000 0.0000 0.0420" size="0.010" rgba="0.95 0.25 0.15 0.85"/>
 <inertial pos="-3.52451e-05 0.00157678 -0.0174625" quat="0.496584 0.503478 -0.496563 0.503328" mass="6.64114" diaginertia="0.046256 0.0242104 0.0227668"/>
