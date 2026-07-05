@@ -40,27 +40,41 @@ from planar_tripod_gait import PlanarTripodGait
 from viewer_controls import VelocityCommand, make_key_handler
 from leg_magnets import LegMagnets
 from wall_demo import (
-    WALL_MODEL, RELEASE, LIFT_HEIGHT, CYCLE_TIME, HEIGHT_COMP, MAX_STRIDE,
+    RELEASE, LIFT_HEIGHT, CYCLE_TIME, HEIGHT_COMP, MAX_STRIDE,
     MAGNET_KG, STANDOFF_ADJ, MAX_V, MAX_TURN,
     WALL_YAW_KP, WALL_YAW_MAX, WALL_LAT_KP, WALL_LAT_MAX,
-    wall_quat, wall_heading, wrap_pi, ensure_model,
+    wall_quat, wall_heading, wrap_pi,
 )
 
-# ---- 平地初始化 ----
-Y_START = 0.70           # 机身初始离墙(y)距离：留一段平地供前进
-Z_FLOOR_MARGIN = 0.0     # 站立高度用 body_z（feet 贴 z=0 地面）
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RAMP_MODEL = os.path.join(SCRIPT_DIR, "generated", "SIX-MOTOR_wall_ramp.xml")
 
-# ---- 乘墙过渡参数 ----
-# 纯姿态伺服会绕机身质心自转、把足端从接触面甩开，无法"以足为轴翻立"。
-# 故过渡期同时伺服机身**位置+姿态**到墙面站姿路点（速度伺服，非硬置 qpos，
-# 物理/接触/磁吸仍生效），平滑地把机身送上墙角贴稳，再交给爬墙步态。
-MOUNT_TIME = 2.5         # 从平地站姿渐变到墙面站姿的时长 (s)
+
+def ensure_ramp_model():
+    if not os.path.isfile(RAMP_MODEL):
+        print("未找到斜面过渡场景，正在生成…", flush=True)
+        import build_wall_ramp_scene
+        build_wall_ramp_scene.main()
+
+
+# ---- 平地初始化 ----
+Y_START = 1.10           # 机身初始离墙(y)距离：斜面延伸到 y≈0.36，前脚前伸~0.35，
+                        #   起点要足够靠后让六足初始都落在平地上、再走向斜面。
+
+# ---- 乘墙过渡参数（沿斜面"贴面引导"上爬）----
+# 尖直角处机身无支撑、纯腿/引导都难（悬臂翻落）；改在 45° 斜面上过渡：机身沿一条
+# **贴着斜面的圆弧路径(二次 Bezier 绕墙角)**被引导俯仰上爬，腿用 follow_gait 在斜面/
+# 墙面上迈步磁吸——全程有支撑面在身下，观感是"贴斜坡爬上墙"而非腾空飞。
+# 引导=对 free joint 做位姿速度伺服(不写 qpos，接触/磁吸仍生效)。
+MOUNT_TIME = 3.5         # 沿斜面从平地站姿爬到墙面站姿的时长 (s)
 ORI_KP = 12.0            # 姿态伺服增益（角速度 = KP·姿态误差矢量）
-ORI_WMAX = 4.0           # 角速度限幅 (rad/s)
+ORI_WMAX = 3.0           # 角速度限幅 (rad/s)
 POS_KP = 6.0             # 位置伺服增益（线速度 = KP·位置误差）
-POS_VMAX = 0.8           # 线速度限幅 (m/s)
-Z_WALL = 0.60            # 乘墙终点在墙面的离地高度：抬到远离墙角，六足全落在墙面
-                        #   （太低时下侧足会吸在 floor(z=0) 面上当支点，机身后倾脱墙）
+POS_VMAX = 0.6           # 线速度限幅 (m/s)
+MOUNT_V = 0.20           # 乘墙期间步态前进量：让腿在斜面/墙面上自然迈步(观感)
+Z_WALL = 0.75            # 乘墙终点离地高度：够高让"六足全部"落在斜面顶(0.36)以上的
+                        #   竖直墙面——否则下侧脚仍吸在 45°斜面上、法向把机身往外拉致下滑。
+BEZIER_C = np.array([0.0, 0.30, 0.40])  # 贴斜面的 Bezier 控制点(斜面上方，引导贴坡拐上墙)
 UPRIGHT_DONE = 0.95      # base +Y 在世界 +Z 的投影 > 此值判定竖直，切 WALL
 
 # 机身→世界（平地朝墙）旋转：base +X→-X, base +Y(前进)→世界 -Y(朝墙),
@@ -141,8 +155,8 @@ def reset_on_floor(model, data, stand_pose, body_z, magnets):
 
 
 def main():
-    ensure_model()
-    model = mujoco.MjModel.from_xml_path(WALL_MODEL)
+    ensure_ramp_model()
+    model = mujoco.MjModel.from_xml_path(RAMP_MODEL)
     data = mujoco.MjData(model)
     stand_pose, body_z = load_stand()
 
@@ -202,17 +216,23 @@ def main():
                 mujoco.mj_step(model, data)
 
         elif state[0] == MOUNT:
-            # 乘墙：**停步保持站姿**，把机身位姿从平地站姿刚体式平滑伺服到墙面站姿。
-            # 停步→六足维持 stand_pose（不迈空），随机身翻立压向墙面被磁力抓牢，最稳。
+            # 沿斜面贴面引导：机身沿"贴斜面的 Bezier 圆弧"从平地站姿爬到墙面站姿，
+            # 腿用 follow_gait 在斜面/墙面上迈步磁吸——身下全程有支撑面，观感贴坡爬升。
             s = min(1.0, (clock[0] - t_mount0[0]) / max(MOUNT_TIME, 1e-6))
             sm = s * s * (3.0 - 2.0 * s)                 # smoothstep 缓入缓出
             q_tgt = slerp_quat(q_floor, q_wall, sm)
+            # 二次 Bezier: 起点 → 贴斜面控制点 → 墙面站姿，路径贴着斜面拐上墙
             p_wall = np.array([0.0, float(body_z) - STANDOFF_ADJ, Z_WALL])
-            p_tgt = p_mount0[0] + sm * (p_wall - p_mount0[0])
-            targets = gait.step(dt, vx=0.0, vy=0.0, omega=0.0)   # 停步保持站姿
+            p_tgt = ((1 - sm) ** 2 * p_mount0[0]
+                     + 2 * (1 - sm) * sm * BEZIER_C
+                     + sm ** 2 * p_wall)
+            targets = gait.step(dt, vx=0.0, vy=MOUNT_V, omega=0.0)  # 腿在面上迈步
             apply_ctrl(model, data, targets)
             for _ in range(n_sub):
-                magnets.enable_all()          # 触面即吸：翻立过程中足端一碰墙就抓牢
+                if gait.active:
+                    magnets.follow_gait(gait, release=RELEASE)     # 支撑吸/摆动释放
+                else:
+                    magnets.enable_all()
                 magnets.apply()
                 drive_root_pose(data, q_tgt, p_tgt)
                 mujoco.mj_step(model, data)
@@ -291,12 +311,12 @@ def main():
         ts = model.opt.timestep
         z0 = float(data.qpos[2])
         cmd.vx = MAX_V
-        # 1) 平地前进直到接近墙角
-        for _ in range(int(3.0 / ts)):
+        # 1) 平地前进直到抵达斜面脚下
+        for _ in range(int(6.0 / ts)):
             control_tick(ts)
-            if data.qpos[1] < 0.42:
+            if data.qpos[1] < 0.80:
                 break
-        print(f"  到墙角 y={data.qpos[1]:.3f} z={data.qpos[2]:.3f}，触发乘墙", flush=True)
+        print(f"  到斜面脚下 y={data.qpos[1]:.3f} z={data.qpos[2]:.3f}，触发乘墙", flush=True)
         # 2) 触发乘墙并跑完过渡
         on_mount()
         for _ in range(int((MOUNT_TIME + 1.5) / ts)):
