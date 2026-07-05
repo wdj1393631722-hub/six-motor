@@ -160,11 +160,11 @@ def main():
     data = mujoco.MjData(model)
     stand_pose, body_z = load_stand()
 
-    print("标定步态…", flush=True)
+    print("标定步态（几秒）…", flush=True)
     gait = PlanarTripodGait(
         model=model, stand_pose=stand_pose, body_height=body_z,
         gait_mode="linear", cycle_time=CYCLE_TIME, lift_height=LIFT_HEIGHT,
-        height_comp_m=HEIGHT_COMP, max_stride=MAX_STRIDE,
+        height_comp_m=HEIGHT_COMP, max_stride=MAX_STRIDE, verbose=False,
     )
     set_gains(model, WALK_KP, WALK_KV)
     magnets = LegMagnets(model, data, force_kg=MAGNET_KG, start_enabled=False)
@@ -286,6 +286,7 @@ def main():
 
     headless = bool(os.environ.get("F2W_HEADLESS")) or not os.environ.get("DISPLAY")
     if not headless:
+        print("正在打开 MuJoCo 窗口…（若被终端挡住，请看任务栏或 Alt+Tab 切过去）", flush=True)
         try:
             with mujoco.viewer.launch_passive(
                 model, data, key_callback=key_callback
